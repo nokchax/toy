@@ -109,7 +109,45 @@ class CrawlFlowTest(
 
         fetcher.page(url, board("재고 있음"))
         assertThat(runner.run(crawl.id).notifiedCount).isEqualTo(1)
-        assertThat(notificationRepository.findAll().single().body).contains("결과가 바뀌었다옹", "재고 있음")
+        assertThat(notificationRepository.findAll().single().body)
+            .contains("값이 바뀌었다옹", "이전: 재고 없음", "현재: 재고 있음")
+    }
+
+    @Test
+    @DisplayName("CHANGED 모드 가격 변동: 이전 값, 현재 값, 변동폭을 알린다")
+    fun changedPrice() {
+        val price = { visible: String -> "<div class=\"price_real\"><div style=\"display:none;\">0</div>$visible<span>원</span></div>" }
+        fetcher.page(url, price("2,249,000"))
+        val crawl = crawlService.register(
+            RegisterCrawl(chatId, "5070ti", url, "div.price_real", cron = "30m", notifyMode = NotifyMode.CHANGED)
+        ).first
+
+        fetcher.page(url, price("2,204,000"))
+        runner.run(crawl.id)
+
+        assertThat(notificationRepository.findAll().single().body)
+            .contains("이전: 2,249,000원", "현재: 2,204,000원", "변동: -45,000 (-2.0%)")
+
+        // 같은 값이면 다시 알리지 않고, 다음 변동은 직전 값 기준으로 비교한다
+        runner.run(crawl.id)
+        fetcher.page(url, price("2,300,000"))
+        runner.run(crawl.id)
+        assertThat(notificationRepository.findAll().map { it.body }).hasSize(2)
+            .last().asString().contains("이전: 2,204,000원", "변동: +96,000 (+4.4%)")
+    }
+
+    @Test
+    @DisplayName("CHANGED 모드 목록: 추가된 항목과 사라진 항목을 알린다")
+    fun changedList() {
+        fetcher.page(url, board("a", "b", "c"))
+        val crawl = register(NotifyMode.CHANGED)
+
+        fetcher.page(url, board("d", "a", "b"))
+        runner.run(crawl.id)
+
+        assertThat(notificationRepository.findAll().single().body)
+            .contains("추가 1 · 사라짐 1", "+ d", "- c")
+            .doesNotContain("+ a", "- a")
     }
 
     @Test

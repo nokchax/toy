@@ -56,6 +56,11 @@ class Crawl(
     var lastHash: String? = null
         protected set
 
+    /** CHANGED 모드에서 이전 값을 보여주기 위한 직전 결과 (항목 텍스트를 줄 단위로) */
+    @Column(length = SNAPSHOT_LENGTH)
+    var lastSnapshot: String? = null
+        protected set
+
     @OneToMany(mappedBy = "crawl", cascade = [CascadeType.ALL], orphanRemoval = true)
     @OrderBy("seq")
     val filters: MutableList<Filter> = mutableListOf()
@@ -80,9 +85,10 @@ class Crawl(
     }
 
     /** 등록 시점의 결과를 기준값으로 기록한다. 이후 실행부터 새 항목을 판별한다. */
-    fun markBaseline(now: ZonedDateTime, hash: String) {
+    fun markBaseline(now: ZonedDateTime, hash: String, snapshot: String) {
         lastRunAt = now
         lastHash = hash
+        lastSnapshot = snapshot
         schedule(now)
     }
 
@@ -100,5 +106,6 @@ class Crawl(
 
     companion object {
         const val MAX_FILTERS = 10
+        const val SNAPSHOT_LENGTH = 4000
     }
 }
