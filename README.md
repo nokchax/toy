@@ -59,13 +59,21 @@ cp .env.example .env && chmod 600 .env   # 프로젝트 루트. TOY_TELEGRAM_TOK
 
 ## NAS 배포
 
-```sh
-ssh nas
-cd /volume2/docker && git clone <저장소> toy && cd toy
-cp .env.example .env && chmod 600 .env && vi .env   # 토큰, chat id, DB 접속 정보
-sudo docker compose up -d --build
-sudo docker compose logs -f
+[`nokchax/deploy`](https://github.com/nokchax/deploy) 가이드의 **방식 A (NAS 에서 빌드)** 를 따른다.
+
 ```
+main 에 push ─▶ test (GitHub 러너) ─▶ deploy (NAS 러너 nas-toy) ─▶ docker compose up -d --build
+```
+
+| 워크플로 | 트리거 | 러너 |
+|---|---|---|
+| `ci.yml` | pull_request | GitHub 호스팅 (`ubuntu-latest`) — 테스트만 |
+| `deploy.yml` | push: main, 수동 실행 | 테스트는 GitHub 호스팅, 배포는 NAS (`self-hosted, nas, toy`) |
+
+- 비밀값은 NAS 의 `/volume2/docker/apps/toy/.env` (권한 600). 키는 `.env.example` 참고, `SPRING_PROFILES_ACTIVE=dev`
+- 공개 저장소라 외부 기여자 PR 은 승인해야 워크플로가 돈다. 모르는 사람 PR 에서 Approve and run 을 누르지 않는다
+- 로그 확인: `ssh nas` 후 `sudo docker logs -f toy`
+- 같은 봇 토큰으로 로컬과 NAS 에서 동시에 띄우지 않는다 (텔레그램은 토큰당 연결 하나만 허용). 로컬 개발은 테스트용 봇 토큰으로
 
 ## 다음 단계
 

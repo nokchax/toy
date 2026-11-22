@@ -1,13 +1,15 @@
-# NAS(amd64)에서 바로 빌드할 수 있도록 빌드까지 컨테이너 안에서 한다
+# syntax=docker/dockerfile:1
+# NAS 러너가 이 Dockerfile 로 직접 빌드한다 (deploy 방식 A). 빌드 단계는 최종 이미지에 남지 않는다
 FROM eclipse-temurin:25-jdk AS build
 WORKDIR /src
 COPY gradlew settings.gradle.kts build.gradle.kts gradle.properties ./
 COPY gradle gradle
-RUN sed -i '/org.gradle.java.installations.paths/d' gradle.properties && ./gradlew --version -q
 COPY common common
 COPY crawler crawler
 COPY bot bot
-RUN ./gradlew :bot:bootJar --no-daemon -q
+# Gradle 캐시를 BuildKit 캐시로 남겨서 다음 빌드부터 의존성을 다시 받지 않는다
+RUN --mount=type=cache,target=/root/.gradle \
+    ./gradlew :bot:bootJar --no-daemon -q
 
 FROM eclipse-temurin:25-jre
 ENV TZ=Asia/Seoul

@@ -1,0 +1,54 @@
+# main 에 push 되면 테스트 → NAS 러너에서 빌드·재시작 (deploy 방식 A)
+# self-hosted 러너는 push: main / workflow_dispatch 로만 실행한다. pull_request 트리거를 추가하지 않는다.
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew test --no-daemon
+
+  deploy:
+    needs: test
+    runs-on: [self-hosted, nas, toy]
+    concurrency: deploy
+    env:
+      APP: toy
+      APP_HOME: /volume2/docker/apps/toy
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check env file
+        run: test -f "$APP_HOME/.env" || { echo "$APP_HOME/.env 가 없음"; exit 1; }
+      - name: Build and restart
+        run: |
+          docker compose -p "$APP" up -d --build --remove-orphans
+          docker image prune -f
+      # 공개 저장소라 Actions 로그가 공개된다. 앱 로그(DB 주소 등 내부 정보 포함)는 여기 출력하지 않는다
+      - name: Wait for startup
+        run: |
+          for i in $(seq 1 60); do
+            if docker logs toy 2>&1 | grep -q "Started ToyApplication"; then
+              echo "started"; exit 0
+            fi
+            if [ "$(docker inspect -f '{{.State.Running}}' toy)" != "true" ]; then
+              echo "컨테이너가 멈춤. NAS 에서 확인: sudo docker logs --tail 100 toy"; exit 1
+            fi
+            sleep 2
+          done
+          echo "120초 안에 시작되지 않음. NAS 에서 확인: sudo docker logs --tail 100 toy"; exit 1
+      - name: Show status
+        run: docker compose -p "$APP" ps

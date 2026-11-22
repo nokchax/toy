@@ -1,13 +1,13 @@
-# NAS 배포: /volume2/docker/toy 에 저장소를 두고 `sudo docker compose up -d --build`
+# APP_HOME: NAS 에서는 배포 워크플로가 /volume2/docker/apps/toy 로 지정한다.
+#           로컬에서는 지정하지 않으면 현재 디렉토리의 .env 를 쓴다.
+# 웹 앱이 아니라서 포트를 열지 않는다. DB 는 NAS MySQL 이라 데이터 볼륨도 없다.
 services:
   toy:
     build: .
     image: toy:latest
     container_name: toy
     restart: unless-stopped
-    env_file: .env
-    environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+    env_file: ${APP_HOME:-.}/.env
     mem_limit: 768m
     logging:
       driver: json-file
