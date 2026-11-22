@@ -1,0 +1,16 @@
+# NAS 배포: /volume2/docker/toy 에 저장소를 두고 `sudo docker compose up -d --build`
+services:
+  toy:
+    build: .
+    image: toy:latest
+    container_name: toy
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+    mem_limit: 768m
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"

@@ -1,0 +1,59 @@
+spring:
+  application:
+    name: toy
+  config:
+    # 로컬 실행 시 프로젝트 루트의 .env 를 읽는다 (없으면 무시). Docker 에서는 compose 가 환경변수로 넣어준다
+    import: optional:file:.env[.properties]
+  profiles:
+    default: local
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: Asia/Seoul
+        timezone:
+          default_storage: NORMALIZE
+  flyway:
+    locations: classpath:db/migration
+
+toy:
+  telegram:
+    # .env 또는 환경변수 TOY_TELEGRAM_TOKEN, TOY_TELEGRAM_ALLOWED_CHAT_IDS (쉼표 구분)
+    token: ${TOY_TELEGRAM_TOKEN:}
+    allowed-chat-ids: ${TOY_TELEGRAM_ALLOWED_CHAT_IDS:}
+  crawl:
+    max-failures: 5
+    max-crawls-per-chat: 30
+  notification:
+    sweep-interval: 30s
+
+logging:
+  level:
+    com.nokchax.toy: info
+
+---
+# 로컬 개발: MySQL 없이 H2 파일 DB (MySQL 모드)
+spring:
+  config:
+    activate:
+      on-profile: local
+  datasource:
+    url: jdbc:h2:file:./data/toy;MODE=MySQL;DATABASE_TO_LOWER=TRUE;AUTO_SERVER=TRUE
+    username: sa
+    password: ""
+
+---
+# NAS MySQL. DB_URL, DB_USERNAME, DB_PASSWORD 는 환경변수로
+spring:
+  config:
+    activate:
+      on-profile: dev | prod
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 5
