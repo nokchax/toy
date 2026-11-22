@@ -8,6 +8,7 @@ import com.nokchax.toy.common.function.ellipsis
 import com.nokchax.toy.crawler.config.CrawlProperties
 import com.nokchax.toy.crawler.extract.ExtractedItem
 import com.nokchax.toy.crawler.extract.resultHash
+import com.nokchax.toy.crawler.extract.snapshot
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
@@ -53,10 +54,15 @@ class CrawlResultRecorder(
         }
 
         toNotify?.let {
-            enqueue(crawl.chatId, crawl.id, MessageRenderer.items(crawl.name, crawl.notifyMode, it, properties.maxItemsPerMessage), now)
+            val body = if (crawl.notifyMode == NotifyMode.CHANGED) {
+                MessageRenderer.changed(crawl.name, crawl.lastSnapshot?.lines(), it, properties.maxItemsPerMessage)
+            } else {
+                MessageRenderer.items(crawl.name, crawl.notifyMode, it, properties.maxItemsPerMessage)
+            }
+            enqueue(crawl.chatId, crawl.id, body, now)
         }
 
-        crawlRepository.markSuccess(crawl.id, now, hash)
+        crawlRepository.markSuccess(crawl.id, now, hash, passed.snapshot())
         historyRepository.save(
             CrawlHistory(
                 crawlId = crawl.id,

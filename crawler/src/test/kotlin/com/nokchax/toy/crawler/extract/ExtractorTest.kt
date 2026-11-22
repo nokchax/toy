@@ -47,6 +47,19 @@ class ExtractorTest {
     }
 
     @Test
+    @DisplayName("display:none, hidden 으로 숨긴 글자는 빼고 화면에 보이는 값만 읽는다")
+    fun hiddenText() {
+        val price = """
+            <div class="price_real"><div style="display: none;">2,243,500</div> 2,249,000<span class="unit">원</span></div>
+            <p class="stock">재고 <span hidden>임시</span>있음</p>
+        """.trimIndent()
+
+        val items = extractor.extract(price, "https://a.b", "div.price_real, p.stock", SelectorType.CSS)
+
+        assertThat(items.map { it.text }).containsExactly("2,249,000원", "재고 있음")
+    }
+
+    @Test
     @DisplayName("XPath 도 된다")
     fun xpath() {
         val items = extractor.extract(html, "https://shop.example.com", "//ul[@class='list']/li/a", SelectorType.XPATH)

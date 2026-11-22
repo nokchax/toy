@@ -36,11 +36,11 @@ interface CrawlRepository : JpaRepository<Crawl, Long> {
     @Modifying
     @Query(
         """
-        UPDATE Crawl c SET c.lastRunAt = :now, c.failCount = 0, c.lastHash = :hash, c.updatedAt = :now
+        UPDATE Crawl c SET c.lastRunAt = :now, c.failCount = 0, c.lastHash = :hash, c.lastSnapshot = :snapshot, c.updatedAt = :now
          WHERE c.id = :id
         """
     )
-    fun markSuccess(id: Long, now: ZonedDateTime, hash: String): Int
+    fun markSuccess(id: Long, now: ZonedDateTime, hash: String, snapshot: String): Int
 
     @Modifying
     @Query("UPDATE Crawl c SET c.lastRunAt = :now, c.failCount = c.failCount + 1, c.updatedAt = :now WHERE c.id = :id")

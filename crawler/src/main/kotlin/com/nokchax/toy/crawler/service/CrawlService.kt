@@ -8,6 +8,7 @@ import com.nokchax.toy.crawler.engine.CrawlRunner
 import com.nokchax.toy.crawler.extract.ExtractedItem
 import com.nokchax.toy.crawler.extract.Extractor
 import com.nokchax.toy.crawler.extract.resultHash
+import com.nokchax.toy.crawler.extract.snapshot
 import com.nokchax.toy.crawler.engine.applyFilters
 import com.nokchax.toy.crawler.fetch.FetchException
 import com.nokchax.toy.crawler.fetch.Fetcher
@@ -71,7 +72,8 @@ class CrawlService(
             )
             // 지금 보이는 항목은 기준값. 첫 실행 때 알림이 쏟아지지 않게 한다.
             itemRepository.saveAll(items.map { CrawlItem(crawl.id, it.hash, it.text, it.url) })
-            crawl.markBaseline(now, items.applyFilters(crawl.filters).resultHash())
+            val passed = items.applyFilters(crawl.filters)
+            crawl.markBaseline(now, passed.resultHash(), passed.snapshot())
             CrawlView.of(crawl)
         }!!
 

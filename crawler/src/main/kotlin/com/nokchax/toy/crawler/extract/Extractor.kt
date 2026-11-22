@@ -1,5 +1,6 @@
 package com.nokchax.toy.crawler.extract
 
+import com.nokchax.toy.common.domain.crawl.Crawl
 import com.nokchax.toy.common.domain.crawl.SelectorType
 import com.nokchax.toy.common.exception.botError
 import com.nokchax.toy.common.function.ellipsis
@@ -24,6 +25,22 @@ data class ExtractedItem(
 
 /** CHANGED 모드에서 직전 결과와 비교하는 해시 */
 fun List<ExtractedItem>.resultHash(): String = joinToString("\n") { it.contentHash }.sha256()
+
+/** 이전 값을 알림에 보여주기 위해 저장하는 결과 텍스트. 줄마다 항목 하나, 전체 길이를 제한한다. */
+fun List<ExtractedItem>.snapshot(maxLength: Int = Crawl.SNAPSHOT_LENGTH): String {
+    val builder = StringBuilder()
+    for (item in this) {
+        val line = item.text.ellipsis(SNAPSHOT_LINE_LENGTH)
+        if (builder.length + line.length + 1 > maxLength) break
+        if (builder.isNotEmpty()) builder.append('\n')
+        builder.append(line)
+    }
+    return builder.toString()
+}
+
+const val SNAPSHOT_LINE_LENGTH = 200
+
+private const val HIDDEN = "[style~=(?i)display\\s*:\\s*none], [hidden]"
 
 @Component
 class Extractor(
@@ -52,11 +69,19 @@ class Extractor(
         }
 
     private fun Element.toItem(): ExtractedItem? {
-        val text = text().trim().ifBlank { attr("title").trim() }.ifBlank { attr("alt").trim() }
+        val text = visibleText().ifBlank { attr("title").trim() }.ifBlank { attr("alt").trim() }
         val url = link()
         if (text.isBlank() && url == null) return null
 
         return ExtractedItem(text.ifBlank { url!! }.ellipsis(1024), url?.ellipsis(2048))
+    }
+
+    /** 화면에 보이는 글자만 읽는다. display:none 이나 hidden 으로 숨긴 자손은 뺀다. */
+    private fun Element.visibleText(): String {
+        if (select(HIDDEN).isEmpty()) return text().trim()
+        val copy = clone()
+        copy.select(HIDDEN).remove()
+        return copy.text().trim()
     }
 
     /** 자기 자신 → 조상 → 자손 순서로 링크를 찾는다. */
