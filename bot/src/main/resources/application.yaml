@@ -19,6 +19,10 @@ spring:
   flyway:
     locations: classpath:db/migration
 
+# 지금은 웹 서버가 없어서 포트를 열지 않는다. MCP 입구 등 웹 기능을 붙이면 이 포트로 뜬다 (8080 은 다른 웹 프로젝트용)
+server:
+  port: ${SERVER_PORT:8090}
+
 toy:
   telegram:
     # .env 또는 환경변수 TOY_TELEGRAM_TOKEN, TOY_TELEGRAM_ALLOWED_CHAT_IDS (쉼표 구분)
