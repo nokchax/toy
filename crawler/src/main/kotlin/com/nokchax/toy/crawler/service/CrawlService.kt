@@ -5,11 +5,11 @@ import com.nokchax.toy.common.exception.botError
 import com.nokchax.toy.crawler.config.CrawlProperties
 import com.nokchax.toy.crawler.engine.CrawlRunResult
 import com.nokchax.toy.crawler.engine.CrawlRunner
+import com.nokchax.toy.crawler.engine.applyFilters
 import com.nokchax.toy.crawler.extract.ExtractedItem
 import com.nokchax.toy.crawler.extract.Extractor
 import com.nokchax.toy.crawler.extract.resultHash
 import com.nokchax.toy.crawler.extract.snapshot
-import com.nokchax.toy.crawler.engine.applyFilters
 import com.nokchax.toy.crawler.fetch.FetchException
 import com.nokchax.toy.crawler.fetch.Fetcher
 import org.springframework.stereotype.Service
@@ -68,7 +68,7 @@ class CrawlService(
                     selectorType = command.selectorType,
                     cron = cron,
                     notifyMode = command.notifyMode,
-                )
+                ),
             )
             // 지금 보이는 항목은 기준값. 첫 실행 때 알림이 쏟아지지 않게 한다.
             itemRepository.saveAll(items.map { CrawlItem(crawl.id, it.hash, it.text, it.url) })
@@ -84,8 +84,7 @@ class CrawlService(
 
     fun get(chatId: Long, id: Long): CrawlView = CrawlView.of(load(chatId, id))
 
-    fun addFilter(chatId: Long, id: Long, op: FilterOp, pattern: String, field: FilterField = FilterField.TEXT): CrawlView =
-        modify(chatId, id) { it.addFilter(op, pattern, field) }
+    fun addFilter(chatId: Long, id: Long, op: FilterOp, pattern: String, field: FilterField = FilterField.TEXT): CrawlView = modify(chatId, id) { it.addFilter(op, pattern, field) }
 
     fun removeFilter(chatId: Long, id: Long, seq: Int): CrawlView = modify(chatId, id) { it.removeFilter(seq) }
 
@@ -120,8 +119,7 @@ class CrawlService(
         return runner.run(id)
     }
 
-    private fun load(chatId: Long, id: Long): Crawl =
-        crawlRepository.findWithPageById(id)?.takeIf { it.chatId == chatId } ?: botError("${id}번 크롤이 없다옹")
+    private fun load(chatId: Long, id: Long): Crawl = crawlRepository.findWithPageById(id)?.takeIf { it.chatId == chatId } ?: botError("${id}번 크롤이 없다옹")
 
     private fun modify(chatId: Long, id: Long, block: (Crawl) -> Unit): CrawlView = transaction.execute {
         val crawl = load(chatId, id)

@@ -92,6 +92,5 @@ object MessageRenderer {
         return "$sign$amount$percent"
     }
 
-    fun disabled(name: String, crawlId: Long, failures: Int, error: String?): String =
-        "⚠️ [$name] 크롤이 ${failures}번 연속 실패해서 껐다옹\n마지막 오류: ${error ?: "알 수 없음"}\n\n다시 켜려면 /crawl on $crawlId"
+    fun disabled(name: String, crawlId: Long, failures: Int, error: String?): String = "⚠️ [$name] 크롤이 ${failures}번 연속 실패해서 껐다옹\n마지막 오류: ${error ?: "알 수 없음"}\n\n다시 켜려면 /crawl on $crawlId"
 }

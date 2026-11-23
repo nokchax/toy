@@ -23,7 +23,8 @@ class TelegramBot(
     private val dispatcher: CommandDispatcher,
     private val registry: CommandRegistry,
     private val sender: TelegramSender,
-) : LongPollingSingleThreadUpdateConsumer, SmartLifecycle {
+) : LongPollingSingleThreadUpdateConsumer,
+    SmartLifecycle {
 
     private val log = KotlinLogging.logger {}
     private val executor = Executors.newVirtualThreadPerTaskExecutor()

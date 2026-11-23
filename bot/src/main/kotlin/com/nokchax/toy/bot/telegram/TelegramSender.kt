@@ -34,30 +34,28 @@ class TelegramSender(
 
     val enabled: Boolean get() = properties.enabled
 
-    fun send(chatId: Long, text: String, buttons: List<List<Button>> = emptyList(), preview: Boolean = false) =
-        throttled(chatId) {
-            client.execute(
-                SendMessage.builder()
-                    .chatId(chatId)
-                    .text(text)
-                    .disableWebPagePreview(!preview)
-                    .apply { if (buttons.isNotEmpty()) replyMarkup(buttons.toMarkup()) }
-                    .build()
-            )
-        }
+    fun send(chatId: Long, text: String, buttons: List<List<Button>> = emptyList(), preview: Boolean = false) = throttled(chatId) {
+        client.execute(
+            SendMessage.builder()
+                .chatId(chatId)
+                .text(text)
+                .disableWebPagePreview(!preview)
+                .apply { if (buttons.isNotEmpty()) replyMarkup(buttons.toMarkup()) }
+                .build(),
+        )
+    }
 
-    fun edit(chatId: Long, messageId: Int, text: String, buttons: List<List<Button>> = emptyList()) =
-        throttled(chatId) {
-            client.execute(
-                EditMessageText.builder()
-                    .chatId(chatId)
-                    .messageId(messageId)
-                    .text(text)
-                    .disableWebPagePreview(true)
-                    .apply { if (buttons.isNotEmpty()) replyMarkup(buttons.toMarkup()) }
-                    .build()
-            )
-        }
+    fun edit(chatId: Long, messageId: Int, text: String, buttons: List<List<Button>> = emptyList()) = throttled(chatId) {
+        client.execute(
+            EditMessageText.builder()
+                .chatId(chatId)
+                .messageId(messageId)
+                .text(text)
+                .disableWebPagePreview(true)
+                .apply { if (buttons.isNotEmpty()) replyMarkup(buttons.toMarkup()) }
+                .build(),
+        )
+    }
 
     /** 버튼을 누른 뒤 도는 로딩 표시를 끈다. 실패해도 무시. */
     fun answerCallback(callbackQueryId: String) {
@@ -74,7 +72,7 @@ class TelegramSender(
             client.execute(
                 SetMyCommands.builder()
                     .commands(registry.commands.map { BotCommand(it.name, it.description.ifBlank { it.name }) })
-                    .build()
+                    .build(),
             )
         } catch (e: TelegramApiException) {
             log.warn { "setMyCommands failed: ${e.message}" }
@@ -107,12 +105,11 @@ class TelegramSender(
         }.also { it.initCause(this) }
     }
 
-    private fun List<List<Button>>.toMarkup(): InlineKeyboardMarkup =
-        InlineKeyboardMarkup(
-            map { row ->
-                InlineKeyboardRow(row.map { InlineKeyboardButton.builder().text(it.text).callbackData(it.callback).build() })
-            }
-        )
+    private fun List<List<Button>>.toMarkup(): InlineKeyboardMarkup = InlineKeyboardMarkup(
+        map { row ->
+            InlineKeyboardRow(row.map { InlineKeyboardButton.builder().text(it.text).callbackData(it.callback).build() })
+        },
+    )
 
     companion object {
         private const val MIN_INTERVAL_MS = 1_000L

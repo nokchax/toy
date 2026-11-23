@@ -29,7 +29,8 @@ class CrawlHandler(
     }
 
     @SubCommand(
-        "add", aliases = ["a"],
+        "add",
+        aliases = ["a"],
         usage = "/crawl add <이름> <url> <selector> [-cron 10m] [-mode new|changed|always] [-xpath]",
         description = "크롤 등록",
     )
@@ -44,7 +45,7 @@ class CrawlHandler(
                 selectorType = request.selectorType(),
                 cron = request.option("cron") ?: "10m",
                 notifyMode = request.option("mode")?.let { NotifyMode.from(it) } ?: NotifyMode.NEW_ITEMS,
-            )
+            ),
         )
 
         return TextResponse(
@@ -99,7 +100,8 @@ class CrawlHandler(
     }
 
     @SubCommand(
-        "filter", aliases = ["f"],
+        "filter",
+        aliases = ["f"],
         usage = "/crawl filter <id> add <조건> <값> [-field url] | del <번호>",
         description = "필터 관리",
     )
@@ -109,6 +111,7 @@ class CrawlHandler(
 
         val crawl = when (request.arg(1)?.lowercase()) {
             null, "list", "ls" -> crawlService.get(request.chatId, id)
+
             "add", "a" -> crawlService.addFilter(
                 chatId = request.chatId,
                 id = id,
@@ -116,9 +119,13 @@ class CrawlHandler(
                 pattern = request.rest(3, usage),
                 field = request.option("field")?.let { FilterField.from(it) } ?: FilterField.TEXT,
             )
+
             "del", "delete", "rm", "d" -> crawlService.removeFilter(
-                request.chatId, id, request.arg(2, usage).toIntOrNull() ?: botError(usage),
+                request.chatId,
+                id,
+                request.arg(2, usage).toIntOrNull() ?: botError(usage),
             )
+
             else -> botError(usage)
         }
 

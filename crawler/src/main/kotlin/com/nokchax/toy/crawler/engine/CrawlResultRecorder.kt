@@ -39,7 +39,7 @@ class CrawlResultRecorder(
         // 필터와 상관없이 뽑은 항목은 모두 "이미 본 항목"으로 저장한다.
         // 나중에 필터를 바꿔도 예전 글이 새 글로 쏟아지지 않게 하기 위함.
         itemRepository.saveAll(
-            items.filter { it.hash !in seen }.map { CrawlItem(crawl.id, it.hash, it.text, it.url) }
+            items.filter { it.hash !in seen }.map { CrawlItem(crawl.id, it.hash, it.text, it.url) },
         )
 
         val passed = items.applyFilters(crawl.filters)
@@ -48,8 +48,11 @@ class CrawlResultRecorder(
         val toNotify = when {
             // 처음 실행이면 기준값만 저장하고 알리지 않는다 (DB 에 직접 등록한 경우 포함)
             crawl.lastRunAt == null -> null
+
             crawl.notifyMode == NotifyMode.NEW_ITEMS -> passed.filter { it.hash !in seen }.ifEmpty { null }
+
             crawl.notifyMode == NotifyMode.CHANGED -> passed.takeIf { hash != crawl.lastHash }
+
             else -> passed
         }
 
@@ -71,7 +74,7 @@ class CrawlResultRecorder(
                 status = CrawlStatus.SUCCESS,
                 itemCount = items.size,
                 newCount = toNotify?.size ?: 0,
-            )
+            ),
         )
 
         return CrawlRunResult(CrawlStatus.SUCCESS, items.size, passed.size, toNotify?.size ?: 0)
@@ -89,7 +92,7 @@ class CrawlResultRecorder(
                 durationMs = Duration.between(startedAt, now).toMillis(),
                 status = CrawlStatus.FAILURE,
                 error = message,
-            )
+            ),
         )
         crawlRepository.increaseFailCount(crawl.id, now)
 

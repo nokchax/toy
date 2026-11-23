@@ -45,10 +45,9 @@ object CronSchedule {
 
     fun next(cron: String, from: ZonedDateTime): ZonedDateTime? = parse(cron).next(from)
 
-    private fun parse(cron: String): CronExpression =
-        try {
-            CronExpression.parse(cron)
-        } catch (e: IllegalArgumentException) {
-            botError("cron 형식이 잘못됐다옹: $cron")
-        }
+    private fun parse(cron: String): CronExpression = try {
+        CronExpression.parse(cron)
+    } catch (e: IllegalArgumentException) {
+        botError("cron 형식이 잘못됐다옹: $cron")
+    }
 }

@@ -14,9 +14,8 @@ enum class NotifyMode(val description: String, private vararg val aliases: Strin
     ;
 
     companion object {
-        fun from(value: String): NotifyMode =
-            entries.firstOrNull { it.name.equals(value, true) || it.aliases.any { alias -> alias.equals(value, true) } }
-                ?: botError("알림 모드는 ${entries.joinToString { it.aliases.first() }} 중 하나다옹")
+        fun from(value: String): NotifyMode = entries.firstOrNull { it.name.equals(value, true) || it.aliases.any { alias -> alias.equals(value, true) } }
+            ?: botError("알림 모드는 ${entries.joinToString { it.aliases.first() }} 중 하나다옹")
     }
 }
 
@@ -26,8 +25,7 @@ enum class FilterField {
     ;
 
     companion object {
-        fun from(value: String): FilterField =
-            entries.firstOrNull { it.name.equals(value, true) } ?: botError("필터 대상은 text, url 중 하나다옹")
+        fun from(value: String): FilterField = entries.firstOrNull { it.name.equals(value, true) } ?: botError("필터 대상은 text, url 중 하나다옹")
     }
 }
 
@@ -61,9 +59,8 @@ enum class FilterOp(private vararg val aliases: String) {
     val keyword: String get() = aliases.first()
 
     companion object {
-        fun from(value: String): FilterOp =
-            entries.firstOrNull { op -> op.aliases.any { it.equals(value, true) } || op.name.equals(value, true) }
-                ?: botError("필터 조건은 ${entries.joinToString { it.keyword }} 중 하나다옹")
+        fun from(value: String): FilterOp = entries.firstOrNull { op -> op.aliases.any { it.equals(value, true) } || op.name.equals(value, true) }
+            ?: botError("필터 조건은 ${entries.joinToString { it.keyword }} 중 하나다옹")
     }
 }
 

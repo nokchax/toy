@@ -29,7 +29,7 @@ interface CrawlRepository : JpaRepository<Crawl, Long> {
         """
         UPDATE Crawl c SET c.nextRunAt = :next, c.updatedAt = :now
          WHERE c.id = :id AND c.active = true AND c.nextRunAt <= :now
-        """
+        """,
     )
     fun claim(id: Long, now: ZonedDateTime, next: ZonedDateTime?): Int
 
@@ -38,7 +38,7 @@ interface CrawlRepository : JpaRepository<Crawl, Long> {
         """
         UPDATE Crawl c SET c.lastRunAt = :now, c.failCount = 0, c.lastHash = :hash, c.lastSnapshot = :snapshot, c.updatedAt = :now
          WHERE c.id = :id
-        """
+        """,
     )
     fun markSuccess(id: Long, now: ZonedDateTime, hash: String, snapshot: String): Int
 
