@@ -9,7 +9,10 @@ import com.nokchax.toy.common.domain.notification.NotificationsEnqueued
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.event.TransactionalEventListener
+import org.springframework.transaction.support.TransactionTemplate
 import java.time.Clock
 import java.time.ZonedDateTime
 import java.util.concurrent.locks.ReentrantLock
@@ -25,9 +28,19 @@ class NotificationDispatcher(
     private val repository: NotificationRepository,
     private val sender: TelegramSender,
     private val clock: Clock,
+    transactionManager: PlatformTransactionManager,
 ) {
     private val log = KotlinLogging.logger {}
     private val lock = ReentrantLock()
+
+    /**
+     * 발송 결과는 항상 새 트랜잭션으로 커밋한다.
+     * AFTER_COMMIT 리스너 안에서는 끝난 크롤 트랜잭션이 아직 스레드에 묶여 있어서,
+     * 그냥 save 하면 그 트랜잭션에 참여한 채 커밋되지 않고 PENDING 으로 남는다 (→ sweep 이 한 번 더 보냄).
+     */
+    private val newTransaction = TransactionTemplate(transactionManager).apply {
+        propagationBehavior = TransactionDefinition.PROPAGATION_REQUIRES_NEW
+    }
 
     @TransactionalEventListener
     fun onEnqueued(event: NotificationsEnqueued) = dispatchPending()
@@ -55,7 +68,7 @@ class NotificationDispatcher(
             false
         }
 
-        repository.save(message)
+        newTransaction.executeWithoutResult { repository.save(message) }
         return sent
     }
 }
