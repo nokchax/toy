@@ -75,7 +75,7 @@ class CrawlService(
             val passed = items.applyFilters(crawl.filters)
             crawl.markBaseline(now, passed.resultHash(), passed.snapshot())
             CrawlView.of(crawl)
-        }!!
+        }
 
         return view to Preview(url, items.size, items.take(properties.previewSize))
     }
@@ -104,7 +104,7 @@ class CrawlService(
         historyRepository.deleteAllByCrawlId(crawl.id)
         crawlRepository.delete(crawl)
         crawl.name
-    }!!
+    }
 
     fun history(chatId: Long, id: Long): List<HistoryView> {
         load(chatId, id)
@@ -126,7 +126,7 @@ class CrawlService(
         block(crawl)
         crawlRepository.flush()
         CrawlView.of(crawl)
-    }!!
+    }
 
     private fun fetchItems(url: String, selector: String, selectorType: SelectorType): List<ExtractedItem> {
         if (selector.isBlank()) botError("selector 가 비어있다옹")

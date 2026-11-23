@@ -9,7 +9,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.context.SmartLifecycle
 import org.springframework.stereotype.Component
 import org.telegram.telegrambots.longpolling.TelegramBotsLongPollingApplication
-import org.telegram.telegrambots.longpolling.util.LongPollingSingleThreadUpdateConsumer
+import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer
 import org.telegram.telegrambots.meta.api.objects.Update
 import java.util.concurrent.Executors
 
@@ -23,7 +23,7 @@ class TelegramBot(
     private val dispatcher: CommandDispatcher,
     private val registry: CommandRegistry,
     private val sender: TelegramSender,
-) : LongPollingSingleThreadUpdateConsumer,
+) : LongPollingUpdateConsumer,
     SmartLifecycle {
 
     private val log = KotlinLogging.logger {}
@@ -49,8 +49,8 @@ class TelegramBot(
     override fun isRunning(): Boolean = application != null
 
     /** 처리 시간이 긴 명령(크롤 미리보기 등)이 다른 메시지를 막지 않도록 메시지마다 가상 스레드에서 처리한다. */
-    override fun consume(update: Update) {
-        executor.submit { handle(update) }
+    override fun consume(updates: List<Update>) {
+        updates.forEach { update -> executor.submit { handle(update) } }
     }
 
     private fun handle(update: Update) {

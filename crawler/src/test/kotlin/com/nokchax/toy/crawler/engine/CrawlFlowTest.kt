@@ -206,7 +206,7 @@ class CrawlFlowTest(
 
         assertThat(claimer.claimDue(later)).containsExactly(crawl.id)
         assertThat(claimer.claimDue(later)).isEmpty()
-        assertThat(claimer.claimDue(crawl.nextRunAt!!.minusSeconds(1))).isEmpty()
+        assertThat(claimer.claimDue(crawl.nextRunAt.minusSeconds(1))).isEmpty()
     }
 
     @Test
