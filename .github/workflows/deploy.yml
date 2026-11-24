@@ -80,7 +80,8 @@ jobs:
         run: test -f "$APP_HOME/.env" || { echo "$APP_HOME/.env 가 없음"; exit 1; }
       - name: Build and restart
         run: |
-          docker compose -p "$APP" up -d --build --remove-orphans $SERVICES
+          # --env-file: compose 파일 안의 ${...} (TOY_INTERNAL_BIND_IP 등) 도 NAS 의 .env 에서 읽는다
+          docker compose -p "$APP" --env-file "$APP_HOME/.env" up -d --build --remove-orphans $SERVICES
           docker image prune -f
       # 공개 저장소라 Actions 로그가 공개된다. 앱 로그(DB 주소 등 내부 정보 포함)는 여기 출력하지 않는다
       - name: Wait for startup
@@ -101,4 +102,4 @@ jobs:
             [ -n "$ok" ] || { echo "$container 가 120초 안에 시작되지 않음. NAS 에서 확인: sudo docker logs --tail 100 $container"; exit 1; }
           done
       - name: Show status
-        run: docker compose -p "$APP" ps
+        run: docker compose -p "$APP" --env-file "$APP_HOME/.env" ps

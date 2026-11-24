@@ -34,13 +34,14 @@ services:
     container_name: toy-crawler
 
   # REST API · MCP. 리버스 프록시 없음 (외부 비공개)
+  # 기본은 127.0.0.1 만. TOY_INTERNAL_BIND_IP 에 NAS 의 내부망 IP 를 넣으면 집 안 네트워크에서도 붙는다 (공유기 포트포워딩은 하지 않는다)
   internal:
     <<: [*app, *browser-client]
     build: { context: ., args: { APP: internal } }
     image: toy-internal:latest
     container_name: toy-internal
     ports:
-      - "127.0.0.1:8090:8090"
+      - "${TOY_INTERNAL_BIND_IP:-127.0.0.1}:8090:8090"
 
   # 계속 떠 있는 원격 브라우저. 앱은 요청마다 세션만 열고 닫는다 (crawl-core BrowserFetcher)
   # 앱 배포와 상관없이 유지된다. 앱 서비스를 올리면 depends_on 으로 같이 뜨고, 이미 떠 있으면 건드리지 않는다
