@@ -38,8 +38,7 @@ class CrawlFlowTest(
         "<li><a href=\"/p/${titles.size - i}\">$title</a></li>"
     }
 
-    private fun register(mode: NotifyMode = NotifyMode.NEW_ITEMS) =
-        crawlService.register(RegisterCrawl(chatId, "핫딜", url, "ul.list li a", cron = "10m", notifyMode = mode)).first
+    private fun register(mode: NotifyMode = NotifyMode.NEW_ITEMS) = crawlService.register(RegisterCrawl(chatId, "핫딜", url, "ul.list li a", cron = "10m", notifyMode = mode)).first
 
     @BeforeEach
     fun clean() {
@@ -119,7 +118,7 @@ class CrawlFlowTest(
         val price = { visible: String -> "<div class=\"price_real\"><div style=\"display:none;\">0</div>$visible<span>원</span></div>" }
         fetcher.page(url, price("2,249,000"))
         val crawl = crawlService.register(
-            RegisterCrawl(chatId, "5070ti", url, "div.price_real", cron = "30m", notifyMode = NotifyMode.CHANGED)
+            RegisterCrawl(chatId, "5070ti", url, "div.price_real", cron = "30m", notifyMode = NotifyMode.CHANGED),
         ).first
 
         fetcher.page(url, price("2,204,000"))
@@ -207,7 +206,7 @@ class CrawlFlowTest(
 
         assertThat(claimer.claimDue(later)).containsExactly(crawl.id)
         assertThat(claimer.claimDue(later)).isEmpty()
-        assertThat(claimer.claimDue(crawl.nextRunAt!!.minusSeconds(1))).isEmpty()
+        assertThat(claimer.claimDue(crawl.nextRunAt.minusSeconds(1))).isEmpty()
     }
 
     @Test

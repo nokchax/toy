@@ -56,17 +56,16 @@ class Extractor(
             .take(properties.maxItems)
     }
 
-    private fun select(root: Element, selector: String, type: SelectorType): Elements =
-        try {
-            when (type) {
-                SelectorType.CSS -> root.select(selector)
-                SelectorType.XPATH -> root.selectXpath(selector)
-            }
-        } catch (e: Selector.SelectorParseException) {
-            botError("selector 문법이 잘못됐다옹: ${e.message}")
-        } catch (e: IllegalStateException) {
-            botError("selector 문법이 잘못됐다옹: ${e.message}")
+    private fun select(root: Element, selector: String, type: SelectorType): Elements = try {
+        when (type) {
+            SelectorType.CSS -> root.select(selector)
+            SelectorType.XPATH -> root.selectXpath(selector)
         }
+    } catch (e: Selector.SelectorParseException) {
+        botError("selector 문법이 잘못됐다옹: ${e.message}")
+    } catch (e: IllegalStateException) {
+        botError("selector 문법이 잘못됐다옹: ${e.message}")
+    }
 
     private fun Element.toItem(): ExtractedItem? {
         val text = visibleText().ifBlank { attr("title").trim() }.ifBlank { attr("alt").trim() }

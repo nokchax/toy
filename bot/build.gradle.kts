@@ -15,7 +15,6 @@ tasks.jar {
     enabled = false
 }
 
-
 // 프로젝트 루트에서 실행해야 .env 와 ./data(H2) 를 루트 기준으로 찾는다
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
     workingDir = rootProject.projectDir

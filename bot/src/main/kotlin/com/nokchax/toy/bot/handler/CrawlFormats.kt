@@ -15,9 +15,8 @@ object CrawlFormats {
 
     fun ZonedDateTime?.short(): String = this?.format(TIME) ?: "-"
 
-    fun summary(crawl: CrawlView): String =
-        "${if (crawl.active) "🟢" else "⚪"} #${crawl.id} ${crawl.name} · ${crawl.cron.humanCron()}" +
-            if (crawl.filters.isEmpty()) "" else " · 필터 ${crawl.filters.size}"
+    fun summary(crawl: CrawlView): String = "${if (crawl.active) "🟢" else "⚪"} #${crawl.id} ${crawl.name} · ${crawl.cron.humanCron()}" +
+        if (crawl.filters.isEmpty()) "" else " · 필터 ${crawl.filters.size}"
 
     fun detail(crawl: CrawlView): String = buildString {
         appendLine("${if (crawl.active) "🟢 켜짐" else "⚪ 꺼짐"}  #${crawl.id} ${crawl.name}")
@@ -59,12 +58,11 @@ object CrawlFormats {
         }
     }
 
-    fun run(result: CrawlRunResult): String =
-        if (result.status == CrawlStatus.SUCCESS) {
-            "🚀 실행 완료다옹\n항목 ${result.itemCount}개 · 필터 통과 ${result.passedCount}개 · 알림 ${result.notifiedCount}개"
-        } else {
-            "❌ 실행 실패다옹: ${result.error}" + if (result.disabled) "\n연속 실패로 크롤을 껐다옹" else ""
-        }
+    fun run(result: CrawlRunResult): String = if (result.status == CrawlStatus.SUCCESS) {
+        "🚀 실행 완료다옹\n항목 ${result.itemCount}개 · 필터 통과 ${result.passedCount}개 · 알림 ${result.notifiedCount}개"
+    } else {
+        "❌ 실행 실패다옹: ${result.error}" + if (result.disabled) "\n연속 실패로 크롤을 껐다옹" else ""
+    }
 
     /** 자주 쓰는 모양만 사람이 읽기 쉽게 바꾼다. */
     fun String.humanCron(): String {

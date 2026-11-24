@@ -84,10 +84,9 @@ class SubCommandSpec(
         method.isAccessible = true
     }
 
-    fun invoke(request: BotRequest): Any? =
-        try {
-            if (method.parameterCount == 0) method.invoke(bean) else method.invoke(bean, request)
-        } catch (e: InvocationTargetException) {
-            throw e.targetException
-        }
+    fun invoke(request: BotRequest): Any? = try {
+        if (method.parameterCount == 0) method.invoke(bean) else method.invoke(bean, request)
+    } catch (e: InvocationTargetException) {
+        throw e.targetException
+    }
 }

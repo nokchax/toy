@@ -3,9 +3,9 @@ package com.nokchax.toy.crawler.engine
 import com.nokchax.toy.crawler.extract.ExtractedItem
 import com.nokchax.toy.crawler.extract.snapshot
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
-import org.junit.jupiter.api.Test
 
 class MessageRendererTest {
 

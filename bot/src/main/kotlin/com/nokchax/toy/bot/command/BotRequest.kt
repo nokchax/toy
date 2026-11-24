@@ -26,8 +26,7 @@ data class BotRequest(
     fun longArg(index: Int, usage: String): Long = arg(index)?.toLongOrNull() ?: botError(usage)
 
     /** index 부터 끝까지 공백으로 이어 붙인다 (따옴표 없이 적은 selector, 필터 값 등) */
-    fun rest(index: Int, usage: String): String =
-        args.drop(index).joinToString(" ").ifBlank { botError(usage) }
+    fun rest(index: Int, usage: String): String = args.drop(index).joinToString(" ").ifBlank { botError(usage) }
 
     fun option(name: String): String? = options[name]
 
@@ -95,12 +94,16 @@ data class BotRequest(
             for (char in text.trim()) {
                 when {
                     quote != null && char == quote -> quote = null
+
                     quote != null -> current.append(char)
+
                     char == '"' || char == '\'' || char == '“' || char == '”' -> {
                         quote = if (char == '“') '”' else char
                         quoted = true
                     }
+
                     char.isWhitespace() -> flush()
+
                     else -> current.append(char)
                 }
             }

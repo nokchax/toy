@@ -1,0 +1,14 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{kt,kts}]
+indent_style = space
+indent_size = 4
+ktlint_code_style = intellij_idea
+# 와일드카드 import 허용 (IntelliJ 는 같은 패키지에서 5개 이상 쓰면 * 로 합친다)
+ktlint_standard_no-wildcard-imports = disabled
