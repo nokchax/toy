@@ -6,12 +6,13 @@ import org.jsoup.Jsoup
 import org.springframework.stereotype.Component
 import java.io.IOException
 
+/** Jsoup 으로 HTML 만 받는다. JS 는 실행하지 않는다. */
 @Component
 class HttpFetcher(
     private val properties: CrawlProperties,
-) : Fetcher {
+) {
 
-    override fun fetch(url: String): FetchedPage {
+    fun fetch(url: String): FetchedPage {
         try {
             val response = Jsoup.connect(url)
                 .userAgent(properties.userAgent)

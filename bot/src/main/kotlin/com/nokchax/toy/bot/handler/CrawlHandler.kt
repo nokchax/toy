@@ -2,6 +2,7 @@ package com.nokchax.toy.bot.handler
 
 import com.nokchax.toy.bot.command.*
 import com.nokchax.toy.bot.handler.CrawlFormats.humanCron
+import com.nokchax.toy.common.domain.crawl.FetchMethod
 import com.nokchax.toy.common.domain.crawl.FilterField
 import com.nokchax.toy.common.domain.crawl.FilterOp
 import com.nokchax.toy.common.domain.crawl.NotifyMode
@@ -21,21 +22,21 @@ class CrawlHandler(
     @SubCommand("")
     fun usage() = TextResponse(USAGE, buttons(listOf(Button("📋 목록", "/cr list"))))
 
-    @SubCommand("test", aliases = ["t"], usage = "/crawl test <url> <selector> [-xpath]", description = "저장하지 않고 미리보기")
+    @SubCommand("test", aliases = ["t"], usage = "/crawl test <url> <selector> [-xpath] [-fetch http|browser]", description = "저장하지 않고 미리보기")
     fun test(request: BotRequest): String {
-        val usage = "/crawl test <url> <selector> [-xpath]"
-        val preview = crawlService.preview(request.arg(0, usage), request.rest(1, usage), request.selectorType())
+        val usage = "/crawl test <url> <selector> [-xpath] [-fetch http|browser]"
+        val preview = crawlService.preview(request.arg(0, usage), request.rest(1, usage), request.selectorType(), request.fetchMethod())
         return "🔍 미리보기\n${CrawlFormats.preview(preview)}"
     }
 
     @SubCommand(
         "add",
         aliases = ["a"],
-        usage = "/crawl add <이름> <url> <selector> [-cron 10m] [-mode new|changed|always] [-xpath]",
+        usage = "/crawl add <이름> <url> <selector> [-cron 10m] [-mode new|changed|always] [-xpath] [-fetch http|browser]",
         description = "크롤 등록",
     )
     fun add(request: BotRequest): TextResponse {
-        val usage = "/crawl add <이름> <url> <selector> [-cron 10m] [-mode new|changed|always] [-xpath]"
+        val usage = "/crawl add <이름> <url> <selector> [-cron 10m] [-mode new|changed|always] [-xpath] [-fetch http|browser]"
         val (crawl, preview) = crawlService.register(
             RegisterCrawl(
                 chatId = request.chatId,
@@ -45,6 +46,7 @@ class CrawlHandler(
                 selectorType = request.selectorType(),
                 cron = request.option("cron") ?: "10m",
                 notifyMode = request.option("mode")?.let { NotifyMode.from(it) } ?: NotifyMode.NEW_ITEMS,
+                fetchMethod = request.fetchMethod(),
             ),
         )
 
@@ -97,6 +99,13 @@ class CrawlHandler(
     fun mode(request: BotRequest): TextResponse {
         val usage = "/crawl mode <id> <new|changed|always>"
         return detail(crawlService.changeMode(request.chatId, request.id(usage), NotifyMode.from(request.arg(1, usage))))
+    }
+
+    @SubCommand("fetch", usage = "/crawl fetch <id> <http|browser>", description = "가져오는 방법 변경")
+    fun fetch(request: BotRequest): TextResponse {
+        val usage = "/crawl fetch <id> <http|browser>\nhttp: 기본. HTML 만 받는다\nbrowser: 브라우저로 열어서 JS 가 그린 내용까지 받는다 (느림)"
+        val crawl = crawlService.changeFetchMethod(request.chatId, request.id(usage), FetchMethod.from(request.arg(1, usage)))
+        return TextResponse("🔄 가져오는 방법: ${crawl.fetchMethod.description}\n지금 보이는 항목을 기준값으로 다시 잡았다옹\n\n${CrawlFormats.detail(crawl)}", detailButtons(crawl))
     }
 
     @SubCommand(
@@ -175,25 +184,29 @@ class CrawlHandler(
 
     private fun BotRequest.selectorType() = if (hasOption("xpath")) SelectorType.XPATH else SelectorType.CSS
 
+    private fun BotRequest.fetchMethod() = option("fetch")?.let { FetchMethod.from(it) } ?: FetchMethod.HTTP
+
     companion object {
         private const val ADD_HINT = "/cr add 핫딜 https://example.com/board \"ul.list li a\" -cron 10m"
 
         private val USAGE = """
             🕷 크롤 명령어 (/crawl, 줄여서 /cr)
 
-            미리보기  /cr test <url> <selector>
-            등록      /cr add <이름> <url> <selector> [-cron 10m] [-mode new]
+            미리보기  /cr test <url> <selector> [-fetch browser]
+            등록      /cr add <이름> <url> <selector> [-cron 10m] [-mode new] [-fetch browser]
             목록      /cr list
             상세      /cr show <id>
             필터      /cr filter <id> add contains 특가
                       /cr filter <id> del <번호>
             주기      /cr cron <id> 30m
             모드      /cr mode <id> new|changed|always
+            가져오기  /cr fetch <id> http|browser
             켜기/끄기 /cr on|off <id>
             실행      /cr run <id>
             기록      /cr history <id>
             삭제      /cr del <id>
 
+            가져오기는 기본 http. JS 로 내용을 그리는 페이지만 browser 로 한다옹.
             selector 에 공백이 있으면 따옴표로 감싸도 되고 그냥 이어 적어도 된다옹.
             예) $ADD_HINT
         """.trimIndent()

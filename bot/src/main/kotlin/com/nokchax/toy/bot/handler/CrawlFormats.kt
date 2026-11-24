@@ -1,6 +1,7 @@
 package com.nokchax.toy.bot.handler
 
 import com.nokchax.toy.common.domain.crawl.CrawlStatus
+import com.nokchax.toy.common.domain.crawl.FetchMethod
 import com.nokchax.toy.common.domain.crawl.SelectorType
 import com.nokchax.toy.common.function.ellipsis
 import com.nokchax.toy.crawl.engine.CrawlRunResult
@@ -16,6 +17,7 @@ object CrawlFormats {
     fun ZonedDateTime?.short(): String = this?.format(TIME) ?: "-"
 
     fun summary(crawl: CrawlView): String = "${if (crawl.active) "🟢" else "⚪"} #${crawl.id} ${crawl.name} · ${crawl.cron.humanCron()}" +
+        (if (crawl.fetchMethod == FetchMethod.BROWSER) " · 브라우저" else "") +
         if (crawl.filters.isEmpty()) "" else " · 필터 ${crawl.filters.size}"
 
     fun detail(crawl: CrawlView): String = buildString {
@@ -25,6 +27,7 @@ object CrawlFormats {
         appendLine("selector: ${crawl.selector}${if (crawl.selectorType == SelectorType.XPATH) " (xpath)" else ""}")
         appendLine("주기: ${crawl.cron.humanCron()} (${crawl.cron})")
         appendLine("알림: ${crawl.notifyMode.description}")
+        appendLine("가져오기: ${crawl.fetchMethod.description}")
         appendLine("다음 실행: ${if (crawl.active) crawl.nextRunAt.short() else "-"} · 마지막: ${crawl.lastRunAt.short()}")
         if (crawl.failCount > 0) appendLine("연속 실패: ${crawl.failCount}")
         appendLine()

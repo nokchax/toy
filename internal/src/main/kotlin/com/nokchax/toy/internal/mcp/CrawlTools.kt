@@ -1,6 +1,7 @@
 package com.nokchax.toy.internal.mcp
 
 import com.nokchax.toy.common.config.ToyProperties
+import com.nokchax.toy.common.domain.crawl.FetchMethod
 import com.nokchax.toy.common.domain.crawl.FilterField
 import com.nokchax.toy.common.domain.crawl.FilterOp
 import com.nokchax.toy.common.domain.crawl.NotifyMode
@@ -41,7 +42,8 @@ class CrawlTools(
         @McpToolParam(description = "페이지 url (http/https)") url: String,
         @McpToolParam(description = "항목을 고르는 CSS selector (xpath 면 selectorType 을 XPATH 로)") selector: String,
         @McpToolParam(description = "CSS 또는 XPATH. 기본 CSS", required = false) selectorType: SelectorType?,
-    ): Preview = crawlService.preview(url, selector, selectorType ?: SelectorType.CSS)
+        @McpToolParam(description = "가져오는 방법 HTTP(기본, HTML 만) / BROWSER(브라우저로 열어 JS 가 그린 내용까지, 느림)", required = false) fetchMethod: FetchMethod?,
+    ): Preview = crawlService.preview(url, selector, selectorType ?: SelectorType.CSS, fetchMethod ?: FetchMethod.HTTP)
 
     @McpTool(name = "register_crawl", description = "크롤 등록. 지금 보이는 항목은 기준값으로 저장하고, 다음 실행부터 조건에 맞는 새 항목을 텔레그램으로 알린다")
     fun registerCrawl(
@@ -51,6 +53,7 @@ class CrawlTools(
         @McpToolParam(description = "CSS 또는 XPATH. 기본 CSS", required = false) selectorType: SelectorType?,
         @McpToolParam(description = "주기. 10m, 1h 같은 줄임말 또는 cron 식. 기본 10m", required = false) cron: String?,
         @McpToolParam(description = "알림 모드 NEW_ITEMS(새 항목) / CHANGED(결과가 바뀌면) / ALWAYS. 기본 NEW_ITEMS", required = false) notifyMode: NotifyMode?,
+        @McpToolParam(description = "가져오는 방법 HTTP(기본, HTML 만) / BROWSER(브라우저로 열어 JS 가 그린 내용까지, 느림)", required = false) fetchMethod: FetchMethod?,
     ): RegisterResponse {
         val (crawl, preview) = crawlService.register(
             RegisterCrawl(
@@ -61,6 +64,7 @@ class CrawlTools(
                 selectorType = selectorType ?: SelectorType.CSS,
                 cron = cron ?: "10m",
                 notifyMode = notifyMode ?: NotifyMode.NEW_ITEMS,
+                fetchMethod = fetchMethod ?: FetchMethod.HTTP,
             ),
         )
         return RegisterResponse(crawl, preview)
@@ -80,6 +84,12 @@ class CrawlTools(
         @McpToolParam(description = "크롤 id") id: Long,
         @McpToolParam(description = "10m, 1h 같은 줄임말 또는 cron 식") cron: String,
     ): CrawlView = crawlService.changeCron(chatId, id, cron)
+
+    @McpTool(name = "change_crawl_fetch_method", description = "가져오는 방법 변경. 바꾼 방법으로 다시 가져와 지금 보이는 항목을 기준값으로 잡는다 (바꾼 직후 기존 항목은 알리지 않음)")
+    fun changeCrawlFetchMethod(
+        @McpToolParam(description = "크롤 id") id: Long,
+        @McpToolParam(description = "HTTP 또는 BROWSER") fetchMethod: FetchMethod,
+    ): CrawlView = crawlService.changeFetchMethod(chatId, id, fetchMethod)
 
     @McpTool(name = "add_crawl_filter", description = "필터 추가. 필터는 모두 통과해야 알린다 (AND)")
     fun addCrawlFilter(

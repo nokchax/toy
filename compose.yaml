@@ -12,29 +12,61 @@ x-app: &app
       max-size: 10m
       max-file: "3"
 
+# 브라우저로 가져오기(FetchMethod.BROWSER)를 쓰는 앱. crawl-core 로 페이지를 가져오는 bot(/cr test · run) · crawler · internal
+x-browser-client: &browser-client
+  environment:
+    TOY_CRAWL_BROWSER_URL: http://browser:4444
+  depends_on: [browser]
+
 services:
   # 텔레그램 메시지 수신 · 처리 · 발송. 텔레그램으로 보내는 유일한 앱
   bot:
-    <<: *app
+    <<: [*app, *browser-client]
     build: { context: ., args: { APP: bot } }
     image: toy-bot:latest
     container_name: toy-bot
 
   # 주기 크롤 실행. 알림은 DB 알림 큐에 쌓고 발송은 bot 이 한다
   crawler:
-    <<: *app
+    <<: [*app, *browser-client]
     build: { context: ., args: { APP: crawler } }
     image: toy-crawler:latest
     container_name: toy-crawler
 
   # REST API · MCP. 리버스 프록시 없음 (외부 비공개)
   internal:
-    <<: *app
+    <<: [*app, *browser-client]
     build: { context: ., args: { APP: internal } }
     image: toy-internal:latest
     container_name: toy-internal
     ports:
       - "127.0.0.1:8090:8090"
+
+  # 계속 떠 있는 원격 브라우저. 앱은 요청마다 세션만 열고 닫는다 (crawl-core BrowserFetcher)
+  # 앱 배포와 상관없이 유지된다. 앱 서비스를 올리면 depends_on 으로 같이 뜨고, 이미 떠 있으면 건드리지 않는다
+  # 버전은 crawl-core 의 selenium 의존성과 맞춘다
+  browser:
+    image: selenium/standalone-chromium:4.52.0-20261101
+    container_name: toy-browser
+    restart: unless-stopped
+    shm_size: 2g
+    mem_limit: 2g
+    environment:
+      # 동시에 여는 탭 수. 넘치면 Grid 가 줄을 세운다 (앱의 readTimeout 2분 안에서 기다림)
+      SE_NODE_MAX_SESSIONS: 2
+      SE_NODE_OVERRIDE_MAX_SESSIONS: "true"
+      # 앱이 죽어서 세션을 못 닫아도 5분 뒤 정리한다
+      SE_NODE_SESSION_TIMEOUT: 300
+      # 화면 보기(VNC)는 쓰지 않는다
+      SE_START_VNC: "false"
+    ports:
+      # 로컬 개발용 (127.0.0.1 만). NAS 에서도 외부에는 열리지 않는다
+      - "127.0.0.1:4444:4444"
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
 
   # 웹 페이지. DSM 리버스 프록시가 localhost:8080 으로 넘긴다
   external:
