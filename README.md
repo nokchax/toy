@@ -100,7 +100,7 @@ claude mcp add --transport http toy http://localhost:8090/mcp --header "Authoriz
 ## 로컬 실행
 
 ```sh
-export JAVA_HOME=/opt/homebrew/opt/openjdk@25
+export JAVA_HOME=/opt/homebrew/opt/openjdk@25/libexec/openjdk.jdk/Contents/Home
 ./gradlew test
 
 cp .env.example .env && chmod 600 .env   # 프로젝트 루트. 필요한 값을 채운다
