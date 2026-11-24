@@ -7,9 +7,9 @@ import com.nokchax.toy.common.domain.crawl.FilterOp
 import com.nokchax.toy.common.domain.crawl.NotifyMode
 import com.nokchax.toy.common.domain.crawl.SelectorType
 import com.nokchax.toy.common.exception.botError
-import com.nokchax.toy.crawler.service.CrawlService
-import com.nokchax.toy.crawler.service.CrawlView
-import com.nokchax.toy.crawler.service.RegisterCrawl
+import com.nokchax.toy.crawl.service.CrawlService
+import com.nokchax.toy.crawl.service.CrawlView
+import com.nokchax.toy.crawl.service.RegisterCrawl
 import org.springframework.stereotype.Component
 
 @Component

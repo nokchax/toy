@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title th:text="${crawl.name} + ' · toy'">크롤 · toy</title>
+  <link rel="stylesheet" th:href="@{/style.css}">
+</head>
+<body>
+<header>
+  <h1><a th:href="@{/}">크롤</a> / <span th:text="'#' + ${crawl.id} + ' ' + ${crawl.name}">이름</span></h1>
+</header>
+
+<dl>
+  <dt>상태</dt>
+  <dd>
+    <span th:if="${crawl.active}" class="on">켜짐</span>
+    <span th:unless="${crawl.active}" class="off">꺼짐</span>
+    <span th:if="${crawl.failCount > 0}" class="warn" th:text="'연속 실패 ' + ${crawl.failCount}">실패</span>
+  </dd>
+  <dt>url</dt>
+  <dd><a th:href="${crawl.url}" th:text="${crawl.url}" rel="noopener noreferrer" target="_blank">url</a></dd>
+  <dt>selector</dt>
+  <dd><code th:text="${crawl.selector}">selector</code> <span class="muted" th:text="${crawl.selectorType}">CSS</span></dd>
+  <dt>주기</dt>
+  <dd><code th:text="${crawl.cron}">cron</code></dd>
+  <dt>알림</dt>
+  <dd th:text="${crawl.notifyMode.description}">모드</dd>
+  <dt>필터</dt>
+  <dd>
+    <span th:if="${#lists.isEmpty(crawl.filters)}" class="muted">없음</span>
+    <ol th:unless="${#lists.isEmpty(crawl.filters)}">
+      <li th:each="f : ${crawl.filters}" th:text="${f.field} + ' ' + ${f.op.keyword} + ' &quot;' + ${f.pattern} + '&quot;'">필터</li>
+    </ol>
+  </dd>
+</dl>
+
+<h2>최근 실행</h2>
+<p th:if="${#lists.isEmpty(history)}" class="muted">실행 기록이 없습니다.</p>
+<table th:unless="${#lists.isEmpty(history)}">
+  <thead>
+  <tr><th>시작</th><th>결과</th><th>소요</th><th>항목</th><th>알림</th><th>오류</th></tr>
+  </thead>
+  <tbody>
+  <tr th:each="h : ${history}">
+    <td th:text="${#temporals.format(h.startedAt, 'MM-dd HH:mm:ss')}">시각</td>
+    <td th:text="${h.status}" th:class="${h.status.name() == 'SUCCESS'} ? 'on' : 'warn'">결과</td>
+    <td th:text="${h.durationMs} + 'ms'">0ms</td>
+    <td th:text="${h.itemCount}">0</td>
+    <td th:text="${h.newCount}">0</td>
+    <td th:text="${h.error} ?: ''"></td>
+  </tr>
+  </tbody>
+</table>
+</body>
+</html>

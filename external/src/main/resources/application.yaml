@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: toy-external
+  profiles:
+    default: local
+  config:
+    import:
+      - classpath:toy-common.yaml
+      - optional:file:.env[.properties]
+
+server:
+  # NAS 에서는 127.0.0.1:8080 에 바인딩하고 DSM 리버스 프록시(HTTPS)가 이 포트로 넘긴다
+  port: ${SERVER_PORT:8080}
+  # 리버스 프록시가 붙인 X-Forwarded-* 헤더를 믿는다 (원래 https 주소 · 접속자 IP)
+  forward-headers-strategy: native
+
+toy:
+  external:
+    username: ${TOY_EXTERNAL_USERNAME:}
+    password: ${TOY_EXTERNAL_PASSWORD:}

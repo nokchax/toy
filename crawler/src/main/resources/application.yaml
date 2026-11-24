@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: toy-crawler
+  profiles:
+    default: local
+  config:
+    import:
+      - classpath:toy-common.yaml
+      - optional:file:.env[.properties]

@@ -3,10 +3,10 @@ package com.nokchax.toy.bot.handler
 import com.nokchax.toy.common.domain.crawl.CrawlStatus
 import com.nokchax.toy.common.domain.crawl.SelectorType
 import com.nokchax.toy.common.function.ellipsis
-import com.nokchax.toy.crawler.engine.CrawlRunResult
-import com.nokchax.toy.crawler.service.CrawlView
-import com.nokchax.toy.crawler.service.HistoryView
-import com.nokchax.toy.crawler.service.Preview
+import com.nokchax.toy.crawl.engine.CrawlRunResult
+import com.nokchax.toy.crawl.service.CrawlView
+import com.nokchax.toy.crawl.service.HistoryView
+import com.nokchax.toy.crawl.service.Preview
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 

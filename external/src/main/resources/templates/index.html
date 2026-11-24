@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>toy · 크롤</title>
+  <link rel="stylesheet" th:href="@{/style.css}">
+</head>
+<body>
+<header>
+  <h1>크롤 <span class="muted" th:text="${#lists.size(crawls)} + '개'">0개</span></h1>
+  <form th:action="@{/logout}" method="post"><button type="submit">로그아웃</button></form>
+</header>
+
+<p th:if="${#lists.isEmpty(crawls)}" class="muted">등록된 크롤이 없습니다. 텔레그램 봇에서 <code>/cr add</code> 로 등록하세요.</p>
+
+<table th:unless="${#lists.isEmpty(crawls)}">
+  <thead>
+  <tr><th>#</th><th>이름</th><th>상태</th><th>주기</th><th>알림</th><th>마지막 실행</th><th>다음 실행</th></tr>
+  </thead>
+  <tbody>
+  <tr th:each="c : ${crawls}">
+    <td th:text="${c.id}">1</td>
+    <td><a th:href="@{/crawls/{id}(id=${c.id})}" th:text="${c.name}">이름</a></td>
+    <td>
+      <span th:if="${c.active}" class="on">켜짐</span>
+      <span th:unless="${c.active}" class="off">꺼짐</span>
+      <span th:if="${c.failCount > 0}" class="warn" th:text="'실패 ' + ${c.failCount}">실패</span>
+    </td>
+    <td><code th:text="${c.cron}">cron</code></td>
+    <td th:text="${c.notifyMode.description}">모드</td>
+    <td th:text="${c.lastRunAt} ? ${#temporals.format(c.lastRunAt, 'MM-dd HH:mm')} : '-'">-</td>
+    <td th:text="${c.nextRunAt} ? ${#temporals.format(c.nextRunAt, 'MM-dd HH:mm')} : '-'">-</td>
+  </tr>
+  </tbody>
+</table>
+</body>
+</html>
