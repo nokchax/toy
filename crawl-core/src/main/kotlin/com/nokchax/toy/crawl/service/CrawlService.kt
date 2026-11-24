@@ -11,7 +11,9 @@ import com.nokchax.toy.crawl.extract.Extractor
 import com.nokchax.toy.crawl.extract.resultHash
 import com.nokchax.toy.crawl.extract.snapshot
 import com.nokchax.toy.crawl.fetch.FetchException
+import com.nokchax.toy.crawl.fetch.FetchRequest
 import com.nokchax.toy.crawl.fetch.Fetcher
+import com.nokchax.toy.crawl.fetch.WaitFor
 import org.springframework.stereotype.Service
 import org.springframework.transaction.support.TransactionTemplate
 import java.net.URI
@@ -38,8 +40,8 @@ class CrawlService(
 ) {
 
     /** 저장하지 않고 바로 가져와서 selector 결과를 보여준다. */
-    fun preview(url: String, selector: String, selectorType: SelectorType = SelectorType.CSS): Preview {
-        val items = fetchItems(validateUrl(url), selector, selectorType)
+    fun preview(url: String, selector: String, selectorType: SelectorType = SelectorType.CSS, fetchMethod: FetchMethod = FetchMethod.HTTP): Preview {
+        val items = fetchItems(validateUrl(url), selector, selectorType, fetchMethod)
         return Preview(url, items.size, items.take(properties.previewSize))
     }
 
@@ -54,7 +56,7 @@ class CrawlService(
         }
 
         // 네트워크 작업은 트랜잭션 밖에서
-        val items = fetchItems(url, command.selector, command.selectorType)
+        val items = fetchItems(url, command.selector, command.selectorType, command.fetchMethod)
 
         val view = transaction.execute {
             val now = ZonedDateTime.now(clock)
@@ -68,6 +70,7 @@ class CrawlService(
                     selectorType = command.selectorType,
                     cron = cron,
                     notifyMode = command.notifyMode,
+                    fetchMethod = command.fetchMethod,
                 ),
             )
             // 지금 보이는 항목은 기준값. 첫 실행 때 알림이 쏟아지지 않게 한다.
@@ -97,6 +100,30 @@ class CrawlService(
     }
 
     fun changeMode(chatId: Long, id: Long, mode: NotifyMode): CrawlView = modify(chatId, id) { it.notifyMode = mode }
+
+    /**
+     * 가져오는 방법을 바꾼다. 바꾼 방법으로 실제로 가져와서 selector 에 걸리는지 먼저 확인한다.
+     * 방법이 바뀌면 보이는 항목도 달라질 수 있어서(예: JS 로 그린 항목), 지금 보이는 항목을 기준값으로 다시 잡는다.
+     * 그래서 바꾼 직후 실행에서 원래 있던 항목이 새 항목으로 몰려 알림되지 않는다.
+     */
+    fun changeFetchMethod(chatId: Long, id: Long, fetchMethod: FetchMethod): CrawlView {
+        val crawl = load(chatId, id)
+        if (crawl.fetchMethod == fetchMethod) return CrawlView.of(crawl)
+
+        // 네트워크 작업은 트랜잭션 밖에서
+        val items = fetchItems(crawl.page.url, crawl.selector, crawl.selectorType, fetchMethod)
+
+        return transaction.execute {
+            val target = load(chatId, id)
+            val seen = itemRepository.findSeenHashes(target.id, items.map { it.hash })
+            itemRepository.saveAll(items.filter { it.hash !in seen }.map { CrawlItem(target.id, it.hash, it.text, it.url) })
+            target.fetchMethod = fetchMethod
+            val passed = items.applyFilters(target.filters)
+            target.markBaseline(ZonedDateTime.now(clock), passed.resultHash(), passed.snapshot())
+            crawlRepository.flush()
+            CrawlView.of(target)
+        }
+    }
 
     fun delete(chatId: Long, id: Long): String = transaction.execute {
         val crawl = load(chatId, id)
@@ -128,10 +155,10 @@ class CrawlService(
         CrawlView.of(crawl)
     }
 
-    private fun fetchItems(url: String, selector: String, selectorType: SelectorType): List<ExtractedItem> {
+    private fun fetchItems(url: String, selector: String, selectorType: SelectorType, fetchMethod: FetchMethod): List<ExtractedItem> {
         if (selector.isBlank()) botError("selector 가 비어있다옹")
         val page = try {
-            fetcher.fetch(url)
+            fetcher.fetch(FetchRequest(url, fetchMethod, WaitFor(selector, selectorType)))
         } catch (e: FetchException) {
             botError("페이지를 가져오지 못했다옹: ${e.message}")
         }

@@ -19,6 +19,20 @@ enum class NotifyMode(val description: String, private vararg val aliases: Strin
     }
 }
 
+/** 페이지를 가져오는 방법. 기본은 HTTP, JS 로 내용을 그리는 페이지는 BROWSER */
+enum class FetchMethod(val description: String, private vararg val aliases: String) {
+    HTTP("HTTP 요청", "http"),
+    BROWSER("브라우저", "browser", "chrome"),
+    ;
+
+    val keyword: String get() = aliases.first()
+
+    companion object {
+        fun from(value: String): FetchMethod = entries.firstOrNull { it.name.equals(value, true) || it.aliases.any { alias -> alias.equals(value, true) } }
+            ?: botError("가져오기 방식은 ${entries.joinToString { it.keyword }} 중 하나다옹")
+    }
+}
+
 enum class FilterField {
     TEXT,
     URL,

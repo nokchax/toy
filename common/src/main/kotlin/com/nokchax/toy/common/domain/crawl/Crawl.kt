@@ -31,6 +31,10 @@ class Crawl(
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 16)
     var notifyMode: NotifyMode = NotifyMode.NEW_ITEMS,
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 16)
+    var fetchMethod: FetchMethod = FetchMethod.HTTP,
 ) : BaseEntity() {
 
     @Column(nullable = false, length = 64)

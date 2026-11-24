@@ -1,6 +1,7 @@
 package com.nokchax.toy.internal.api
 
 import com.nokchax.toy.common.config.ToyProperties
+import com.nokchax.toy.common.domain.crawl.FetchMethod
 import com.nokchax.toy.common.domain.crawl.FilterField
 import com.nokchax.toy.common.domain.crawl.FilterOp
 import com.nokchax.toy.common.domain.crawl.NotifyMode
@@ -46,7 +47,7 @@ class CrawlApiController(
     fun history(@PathVariable id: Long): List<HistoryView> = crawlService.history(chatId, id)
 
     @PostMapping("/preview")
-    fun preview(@RequestBody request: PreviewRequest): Preview = crawlService.preview(request.url, request.selector, request.selectorType)
+    fun preview(@RequestBody request: PreviewRequest): Preview = crawlService.preview(request.url, request.selector, request.selectorType, request.fetchMethod)
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -60,6 +61,7 @@ class CrawlApiController(
                 selectorType = request.selectorType,
                 cron = request.cron,
                 notifyMode = request.notifyMode,
+                fetchMethod = request.fetchMethod,
             ),
         )
         return RegisterResponse(crawl, preview)
@@ -76,6 +78,10 @@ class CrawlApiController(
 
     @PutMapping("/{id}/mode")
     fun changeMode(@PathVariable id: Long, @RequestBody request: ModeRequest): CrawlView = crawlService.changeMode(chatId, id, request.notifyMode)
+
+    /** 바꾼 방법으로 다시 가져와 지금 보이는 항목을 기준값으로 잡는다 */
+    @PutMapping("/{id}/fetch-method")
+    fun changeFetchMethod(@PathVariable id: Long, @RequestBody request: FetchMethodRequest): CrawlView = crawlService.changeFetchMethod(chatId, id, request.fetchMethod)
 
     @PostMapping("/{id}/filters")
     fun addFilter(@PathVariable id: Long, @RequestBody request: FilterRequest): CrawlView = crawlService.addFilter(chatId, id, FilterOp.from(request.op), request.pattern, request.field)
@@ -96,6 +102,7 @@ data class PreviewRequest(
     val url: String,
     val selector: String,
     val selectorType: SelectorType = SelectorType.CSS,
+    val fetchMethod: FetchMethod = FetchMethod.HTTP,
 )
 
 data class RegisterRequest(
@@ -105,6 +112,7 @@ data class RegisterRequest(
     val selectorType: SelectorType = SelectorType.CSS,
     val cron: String = "10m",
     val notifyMode: NotifyMode = NotifyMode.NEW_ITEMS,
+    val fetchMethod: FetchMethod = FetchMethod.HTTP,
 )
 
 data class RegisterResponse(
@@ -117,6 +125,8 @@ data class ActiveRequest(val active: Boolean)
 data class CronRequest(val cron: String)
 
 data class ModeRequest(val notifyMode: NotifyMode)
+
+data class FetchMethodRequest(val fetchMethod: FetchMethod)
 
 data class FilterRequest(
     /** contains, not_contains, equals, not_equals, starts_with, ends_with, regex */

@@ -18,4 +18,16 @@ data class CrawlProperties(
     val maxItemsPerMessage: Int = 10,
     /** 동시에 실행하는 크롤 수 */
     val concurrency: Int = 4,
-)
+    val browser: Browser = Browser(),
+) {
+    /** FetchMethod.BROWSER 로 가져올 때 붙는 원격 브라우저 (compose 의 browser 서비스) */
+    data class Browser(
+        /** Selenium 주소. 예: http://browser:4444. 비어 있으면 브라우저로 가져오기는 실패한다 */
+        val url: String? = null,
+        val pageLoadTimeout: Duration = Duration.ofSeconds(30),
+        /** selector 에 걸리는 요소가 나타날 때까지 기다리는 최대 시간 */
+        val waitTimeout: Duration = Duration.ofSeconds(10),
+        /** 브라우저 응답을 기다리는 최대 시간. 세션이 꽉 차서 줄을 서는 시간도 포함한다 */
+        val readTimeout: Duration = Duration.ofMinutes(2),
+    )
+}

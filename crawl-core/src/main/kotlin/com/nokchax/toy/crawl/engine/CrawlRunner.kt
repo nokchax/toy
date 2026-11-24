@@ -5,7 +5,9 @@ import com.nokchax.toy.common.domain.crawl.CrawlStatus
 import com.nokchax.toy.common.exception.BotException
 import com.nokchax.toy.crawl.extract.Extractor
 import com.nokchax.toy.crawl.fetch.FetchException
+import com.nokchax.toy.crawl.fetch.FetchRequest
 import com.nokchax.toy.crawl.fetch.Fetcher
+import com.nokchax.toy.crawl.fetch.WaitFor
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Component
 import java.time.Clock
@@ -31,7 +33,7 @@ class CrawlRunner(
         val startedAt = ZonedDateTime.now(clock)
 
         val error = try {
-            val page = fetcher.fetch(crawl.page.url)
+            val page = fetcher.fetch(FetchRequest(crawl.page.url, crawl.fetchMethod, WaitFor(crawl.selector, crawl.selectorType)))
             val items = extractor.extract(page.html, page.url, crawl.selector, crawl.selectorType)
             if (items.isNotEmpty()) {
                 return recorder.recordSuccess(crawl, items, startedAt)

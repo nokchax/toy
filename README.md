@@ -15,6 +15,7 @@ Kotlin 2.4 · Spring Boot 4.1 · JDK 25 · MySQL 8 (로컬은 H2) · telegrambot
 | `crawler` | 주기 크롤 실행. 결과와 알림을 DB 에 저장 | 없음 |
 | `internal` | 크롤 REST API (`/api/crawls`) · MCP 서버 (`/mcp`). API 키 필요, 외부 비공개 | 8090 |
 | `external` | 크롤 목록 · 상세 웹 페이지. 로그인 필요, 리버스 프록시로 외부 공개 | 8080 |
+| `browser` | 계속 떠 있는 원격 브라우저 (`selenium/standalone-chromium`). 앱이 아니라 compose 서비스 | 4444 (127.0.0.1) |
 
 ## 흐름
 
@@ -28,6 +29,10 @@ Kotlin 2.4 · Spring Boot 4.1 · JDK 25 · MySQL 8 (로컬은 H2) · telegrambot
 - 이미 본 항목 · 보낼 알림 · 실행 기록은 한 트랜잭션으로 저장해서 알림이 유실되거나 중복되지 않는다.
 - 발송이 실패하면 알림 큐에 남아 1, 2, 4 … 분 간격으로 다시 보낸다.
 - 크롤이 연속 5번 실패하면 끄고 알린다.
+- 가져오기는 크롤마다 고른다. 기본은 `HTTP`(Jsoup, HTML 만), `BROWSER` 는 `browser` 컨테이너에 붙어 JS 가 그린 뒤의 HTML 을 받는다.
+  - 브라우저는 계속 떠 있고 요청마다 세션(탭)만 열고 닫는다. 앱을 배포해도 브라우저는 그대로다.
+  - 크롤의 selector 에 걸리는 요소가 나타날 때까지 최대 10초 기다린다.
+  - 가져오는 방법을 바꾸면 바꾼 방법으로 다시 가져와 지금 보이는 항목을 기준값으로 잡는다 (바꾼 직후 기존 항목이 몰려 알림되지 않게).
 - 모든 앱이 시작할 때 Flyway 마이그레이션을 돌린다 (DB 락으로 동시 실행을 막는다). 일부 앱만 새로 배포해도 된다.
 
 ## 모듈
@@ -35,7 +40,7 @@ Kotlin 2.4 · Spring Boot 4.1 · JDK 25 · MySQL 8 (로컬은 H2) · telegrambot
 | 모듈 | 종류 | 내용 |
 |---|---|---|
 | `common` | 라이브러리 | Entity · Repository · Flyway 마이그레이션 (`db/migration`) · 공통 설정 `toy-common.yaml` |
-| `crawl-core` | 라이브러리 | 크롤 엔진 (`HttpFetcher` → `Extractor` → 필터 → `CrawlResultRecorder`), `CrawlClaimer`, `CrawlService` |
+| `crawl-core` | 라이브러리 | 크롤 엔진 (`FetcherRouter` → `HttpFetcher` · `BrowserFetcher` → `Extractor` → 필터 → `CrawlResultRecorder`), `CrawlClaimer`, `CrawlService` |
 | `bot` | 앱 | 텔레그램 수신 (`TelegramBot`), 명령어 (`@BotCommand` / `@SubCommand`), 발송 (`TelegramSender`, `NotificationDispatcher`) |
 | `crawler` | 앱 | `CrawlScheduler` |
 | `internal` | 앱 | `CrawlApiController` (REST), `CrawlTools` (MCP 도구), `ApiKeyFilter` |
@@ -46,8 +51,8 @@ Kotlin 2.4 · Spring Boot 4.1 · JDK 25 · MySQL 8 (로컬은 H2) · telegrambot
 ## 명령어
 
 ```
-/cr test <url> <selector>                       저장하지 않고 미리보기
-/cr add <이름> <url> <selector> [-cron 10m] [-mode new|changed|always] [-xpath]
+/cr test <url> <selector> [-fetch browser]      저장하지 않고 미리보기
+/cr add <이름> <url> <selector> [-cron 10m] [-mode new|changed|always] [-xpath] [-fetch http|browser]
 /cr list · /cr show <id>
 /cr filter <id> add contains 특가               조건: contains, not_contains, equals, not_equals,
 /cr filter <id> add regex "특가|핫딜"                   starts_with, ends_with, regex
@@ -55,11 +60,13 @@ Kotlin 2.4 · Spring Boot 4.1 · JDK 25 · MySQL 8 (로컬은 H2) · telegrambot
 /cr filter <id> del <번호>
 /cr cron <id> 30m                               10m · 1h · "*/10 * * * *" · "0 0 9 * * *"
 /cr mode <id> new|changed|always
+/cr fetch <id> http|browser                     가져오는 방법 변경
 /cr on|off|run|history|del <id>
 ```
 
 - 필터는 번호 순서대로 **모두** 통과해야 남는다 (AND). OR 은 `regex "a|b"`.
 - 알림 모드: `new` 처음 보는 항목 · `changed` 결과가 바뀌면 · `always` 실행할 때마다.
+- 가져오기: `http` (기본) · `browser` JS 로 내용을 그리는 페이지용. 느리고 무거우니 http 로 안 보일 때만 쓴다.
 
 ## 인터널 API · MCP
 
@@ -69,18 +76,19 @@ Kotlin 2.4 · Spring Boot 4.1 · JDK 25 · MySQL 8 (로컬은 H2) · telegrambot
 GET    /api/crawls                    목록
 GET    /api/crawls/{id}               상세
 GET    /api/crawls/{id}/history       최근 실행 기록
-POST   /api/crawls/preview            {"url", "selector", "selectorType"?}  저장하지 않고 미리보기
-POST   /api/crawls                    {"name", "url", "selector", "selectorType"?, "cron"?, "notifyMode"?}
+POST   /api/crawls/preview            {"url", "selector", "selectorType"?, "fetchMethod"?}  저장하지 않고 미리보기
+POST   /api/crawls                    {"name", "url", "selector", "selectorType"?, "cron"?, "notifyMode"?, "fetchMethod"?}
 POST   /api/crawls/{id}/run           지금 실행 (알림은 bot 이 보낸다)
 PUT    /api/crawls/{id}/active        {"active": true|false}
 PUT    /api/crawls/{id}/cron          {"cron": "1h"}
 PUT    /api/crawls/{id}/mode          {"notifyMode": "NEW_ITEMS"|"CHANGED"|"ALWAYS"}
+PUT    /api/crawls/{id}/fetch-method  {"fetchMethod": "HTTP"|"BROWSER"}
 POST   /api/crawls/{id}/filters       {"op": "contains", "pattern": "특가", "field"?: "TEXT"|"URL"}
 DELETE /api/crawls/{id}/filters/{seq}
 DELETE /api/crawls/{id}
 ```
 
-MCP 도구 (Streamable HTTP, `POST /mcp`): `list_crawls` · `get_crawl` · `crawl_history` · `preview_crawl` · `register_crawl` · `run_crawl` · `set_crawl_active` · `change_crawl_cron` · `add_crawl_filter` · `remove_crawl_filter`
+MCP 도구 (Streamable HTTP, `POST /mcp`): `list_crawls` · `get_crawl` · `crawl_history` · `preview_crawl` · `register_crawl` · `run_crawl` · `set_crawl_active` · `change_crawl_cron` · `change_crawl_fetch_method` · `add_crawl_filter` · `remove_crawl_filter`
 
 ```sh
 # Claude Code 에 등록 (로컬 실행 기준)
@@ -103,12 +111,13 @@ cp .env.example .env && chmod 600 .env   # 프로젝트 루트. 필요한 값을
 ```
 
 - 앱이 프로젝트 루트의 `.env` 를 직접 읽는다 (`spring.config.import: optional:file:.env[.properties]`). 같은 이름의 환경변수가 있으면 환경변수가 우선한다.
+- 브라우저로 가져오기를 로컬에서 쓰려면 `docker compose up -d browser` 후 `.env` 에 `TOY_CRAWL_BROWSER_URL=http://localhost:4444`.
 - 토큰 없이 띄우면 bot 은 텔레그램 연결 없이 뜬다 (알림은 큐에 남는다).
 - `TOY_TELEGRAM_ALLOWED_CHAT_IDS` 를 비워두고 봇에 `/help` 를 보내면 내 chat id 를 알려준다.
 - 같은 봇 토큰으로 로컬과 NAS 에서 동시에 띄우지 않는다 (텔레그램은 토큰당 연결 하나만 허용). 로컬 개발은 테스트용 봇 토큰으로.
 
 ## 다음 단계
 
-- 브라우저 Fetcher (Selenium 컨테이너): JS 렌더링 · 로그인 페이지
+- 브라우저 Fetcher 로 로그인이 필요한 페이지 (지금은 JS 렌더링만)
 - 익스터널 페이지에서 크롤 수정 (지금은 읽기 전용)
 - 사이트별 요청 간격 제한, 오래된 `crawl_items` · `crawl_histories` 정리

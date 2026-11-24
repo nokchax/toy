@@ -47,6 +47,7 @@ class CrawlFlowTest(
         itemRepository.deleteAll()
         crawlRepository.deleteAll()
         pageRepository.deleteAll()
+        fetcher.requests.clear()
     }
 
     @Test
@@ -227,6 +228,53 @@ class CrawlFlowTest(
 
         assertThat(crawlService.list(999L)).isEmpty()
         assertThatThrownBy { crawlService.get(999L, crawl.id) }.isInstanceOf(BotException::class.java)
+    }
+
+    @Test
+    @DisplayName("가져오는 방법을 지정하지 않으면 HTTP, 지정하면 그 방법으로 등록 · 실행한다")
+    fun fetchMethodOnRegister() {
+        fetcher.page(url, board("a"))
+
+        val default = register()
+        val browser = crawlService.register(RegisterCrawl(chatId, "브라우저", url, "ul.list li a", fetchMethod = FetchMethod.BROWSER)).first
+        runner.run(browser.id)
+
+        assertThat(default.fetchMethod).isEqualTo(FetchMethod.HTTP)
+        assertThat(browser.fetchMethod).isEqualTo(FetchMethod.BROWSER)
+        assertThat(fetcher.requests.map { it.method }).containsExactly(FetchMethod.HTTP, FetchMethod.BROWSER, FetchMethod.BROWSER)
+        assertThat(fetcher.requests.last().waitFor?.selector).isEqualTo("ul.list li a")
+    }
+
+    @Test
+    @DisplayName("가져오는 방법을 바꾸면 그 방법으로 다시 가져와 기준값을 잡아서, 원래 있던 항목은 알리지 않는다")
+    fun changeFetchMethodRebaselines() {
+        fetcher.page(url, board("a"))
+        val crawl = register()
+
+        // 브라우저로 보면 JS 로 그린 항목 b 가 더 보인다고 가정
+        fetcher.page(url, board("b", "a"))
+        val changed = crawlService.changeFetchMethod(chatId, crawl.id, FetchMethod.BROWSER)
+
+        assertThat(changed.fetchMethod).isEqualTo(FetchMethod.BROWSER)
+        assertThat(fetcher.requests.last().method).isEqualTo(FetchMethod.BROWSER)
+        assertThat(itemRepository.countByCrawlId(crawl.id)).isEqualTo(2)
+        assertThat(runner.run(crawl.id).notifiedCount).isZero()
+
+        fetcher.page(url, board("c", "b", "a"))
+        assertThat(runner.run(crawl.id).notifiedCount).isEqualTo(1)
+    }
+
+    @Test
+    @DisplayName("바꾼 방법으로 가져오지 못하면 바꾸지 않는다")
+    fun changeFetchMethodFails() {
+        fetcher.page(url, board("a"))
+        val crawl = register()
+
+        fetcher.fail(url, "브라우저에 연결하지 못함")
+
+        assertThatThrownBy { crawlService.changeFetchMethod(chatId, crawl.id, FetchMethod.BROWSER) }
+            .isInstanceOf(BotException::class.java).hasMessageContaining("브라우저에 연결하지 못함")
+        assertThat(crawlService.get(chatId, crawl.id).fetchMethod).isEqualTo(FetchMethod.HTTP)
     }
 
     @Test

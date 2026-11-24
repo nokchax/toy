@@ -13,6 +13,7 @@ data class CrawlView(
     val selectorType: SelectorType,
     val cron: String,
     val notifyMode: NotifyMode,
+    val fetchMethod: FetchMethod,
     val active: Boolean,
     val nextRunAt: ZonedDateTime?,
     val lastRunAt: ZonedDateTime?,
@@ -28,6 +29,7 @@ data class CrawlView(
             selectorType = crawl.selectorType,
             cron = crawl.cron,
             notifyMode = crawl.notifyMode,
+            fetchMethod = crawl.fetchMethod,
             active = crawl.active,
             nextRunAt = crawl.nextRunAt,
             lastRunAt = crawl.lastRunAt,
@@ -67,4 +69,5 @@ data class RegisterCrawl(
     val selectorType: SelectorType = SelectorType.CSS,
     val cron: String = "10m",
     val notifyMode: NotifyMode = NotifyMode.NEW_ITEMS,
+    val fetchMethod: FetchMethod = FetchMethod.HTTP,
 )
