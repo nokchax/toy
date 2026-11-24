@@ -93,7 +93,12 @@ MCP 도구 (Streamable HTTP, `POST /mcp`): `list_crawls` · `get_crawl` · `craw
 ```sh
 # Claude Code 에 등록 (로컬 실행 기준)
 claude mcp add --transport http toy http://localhost:8090/mcp --header "Authorization: Bearer <TOY_INTERNAL_API_KEY>"
+# NAS 에 붙을 때 (집 안 네트워크, NAS .env 에 TOY_INTERNAL_BIND_IP=<NAS 내부망 IP>)
+claude mcp add --transport http toy http://<NAS 내부망 IP>:8090/mcp --header "Authorization: Bearer <TOY_INTERNAL_API_KEY>"
 ```
+
+- NAS 의 인터널은 기본으로 `127.0.0.1` 에만 열린다. `TOY_INTERNAL_BIND_IP` 를 넣으면 그 주소로 열린다. 공유기 포트포워딩은 하지 않으므로 밖에서는 닿지 않는다.
+- 내부망 안에서도 평문 HTTP 라 API 키가 그대로 오간다. 집 밖에서 쓰려면 VPN(Tailscale 등)을 따로 둔다.
 
 인터널 · 익스터널은 `TOY_OWNER_CHAT_ID` 의 크롤을 다룬다. 봇에서 쓰는 내 chat id 와 같게 두면 봇 · API · 웹이 같은 크롤을 본다.
 
