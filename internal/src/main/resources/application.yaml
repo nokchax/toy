@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: toy-internal
+  profiles:
+    default: local
+  config:
+    import:
+      - classpath:toy-common.yaml
+      - optional:file:.env[.properties]
+  ai:
+    mcp:
+      server:
+        name: toy
+        version: 1.0.0
+        # Streamable HTTP, 엔드포인트 POST /mcp
+        protocol: streamable
+
+server:
+  # NAS 에서는 127.0.0.1:8090 에만 바인딩한다 (리버스 프록시 없음, 외부 비공개)
+  port: ${SERVER_PORT:8090}
+
+toy:
+  internal:
+    api-key: ${TOY_INTERNAL_API_KEY:}

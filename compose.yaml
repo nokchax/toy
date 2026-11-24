@@ -1,16 +1,46 @@
-# APP_HOME: NAS 에서는 배포 워크플로가 /volume2/docker/apps/toy 로 지정한다.
+# APP_HOME: NAS 에서는 배포 워크플로가 앱 디렉토리로 지정한다.
 #           로컬에서는 지정하지 않으면 현재 디렉토리의 .env 를 쓴다.
-# 웹 앱이 아니라서 포트를 열지 않는다. DB 는 NAS MySQL 이라 데이터 볼륨도 없다.
+# 앱마다 서비스 하나. 배포 태그에 따라 일부 서비스만 다시 빌드 · 재시작한다 (.github/workflows/deploy.yml)
+# DB 는 NAS MySQL 이라 데이터 볼륨이 없다. 웹 포트는 127.0.0.1 에만 바인딩한다 (외부 공개는 리버스 프록시로만)
+x-app: &app
+  restart: unless-stopped
+  env_file: ${APP_HOME:-.}/.env
+  mem_limit: 512m
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "3"
+
 services:
-  toy:
-    build: .
-    image: toy:latest
-    container_name: toy
-    restart: unless-stopped
-    env_file: ${APP_HOME:-.}/.env
-    mem_limit: 768m
-    logging:
-      driver: json-file
-      options:
-        max-size: 10m
-        max-file: "3"
+  # 텔레그램 메시지 수신 · 처리 · 발송. 텔레그램으로 보내는 유일한 앱
+  bot:
+    <<: *app
+    build: { context: ., args: { APP: bot } }
+    image: toy-bot:latest
+    container_name: toy-bot
+
+  # 주기 크롤 실행. 알림은 DB 알림 큐에 쌓고 발송은 bot 이 한다
+  crawler:
+    <<: *app
+    build: { context: ., args: { APP: crawler } }
+    image: toy-crawler:latest
+    container_name: toy-crawler
+
+  # REST API · MCP. 리버스 프록시 없음 (외부 비공개)
+  internal:
+    <<: *app
+    build: { context: ., args: { APP: internal } }
+    image: toy-internal:latest
+    container_name: toy-internal
+    ports:
+      - "127.0.0.1:8090:8090"
+
+  # 웹 페이지. DSM 리버스 프록시가 localhost:8080 으로 넘긴다
+  external:
+    <<: *app
+    build: { context: ., args: { APP: external } }
+    image: toy-external:latest
+    container_name: toy-external
+    ports:
+      - "127.0.0.1:8080:8080"

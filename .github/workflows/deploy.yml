@@ -1,16 +1,60 @@
-# main 에 push 되면 테스트 → NAS 러너에서 빌드·재시작 (deploy 방식 A)
-# self-hosted 러너는 push: main / workflow_dispatch 로만 실행한다. pull_request 트리거를 추가하지 않는다.
+# 배포 태그를 push 하면 테스트 → NAS 러너에서 태그에 해당하는 앱만 빌드 · 재시작한다 (deploy 방식 A)
+#
+# 태그 형식: v<YY>.<MM>.<DD>.<그날 순번 2자리>[-<앱>...]
+#   v26.11.24.01        전체 (bot, crawler, internal, external)
+#   v26.11.24.02-b      bot
+#   v26.11.24.03-b-cr   bot + crawler
+#   앱 코드: b=bot, cr=crawler, i=internal, e=external
+# main 에 머지된 커밋에 붙은 태그만 배포한다.
+#
+# self-hosted 러너는 태그 push 로만 실행한다 (태그는 쓰기 권한자만 push 할 수 있다). pull_request 트리거를 추가하지 않는다.
 name: deploy
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
+    tags: ["v*"]
 
 permissions:
   contents: read
 
 jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.parse.outputs.services }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Parse tag
+        id: parse
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          if ! [[ "$TAG" =~ ^v[0-9]{2}\.[0-9]{2}\.[0-9]{2}\.[0-9]{2}(-(b|cr|i|e))*$ ]]; then
+            echo "배포 태그 형식이 아님: $TAG (예: v26.11.24.01, v26.11.24.02-b-cr)"; exit 1
+          fi
+
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "main 에 머지되지 않은 커밋이라 배포하지 않음: $TAG ($GITHUB_SHA)"; exit 1
+          fi
+
+          codes=""                      # v26.11.24.03-b-cr → "b-cr", v26.11.24.01 → ""
+          [[ "$TAG" == *-* ]] && codes="${TAG#*-}"
+          services=""
+          for code in ${codes//-/ }; do
+            case "$code" in
+              b) app=bot ;;
+              cr) app=crawler ;;
+              i) app=internal ;;
+              e) app=external ;;
+            esac
+            [[ " $services " == *" $app "* ]] || services="$services $app"
+          done
+          services="${services:- bot crawler internal external}"
+          echo "배포 대상:$services"
+          echo "services=${services# }" >> "$GITHUB_OUTPUT"
+
   test:
     runs-on: ubuntu-latest
     steps:
@@ -23,32 +67,38 @@ jobs:
       - run: ./gradlew test --no-daemon
 
   deploy:
-    needs: test
+    needs: [plan, test]
     runs-on: [self-hosted, nas, toy]
     concurrency: deploy
     env:
       APP: toy
       APP_HOME: /volume2/docker/apps/toy
+      SERVICES: ${{ needs.plan.outputs.services }}
     steps:
       - uses: actions/checkout@v4
       - name: Check env file
         run: test -f "$APP_HOME/.env" || { echo "$APP_HOME/.env 가 없음"; exit 1; }
       - name: Build and restart
         run: |
-          docker compose -p "$APP" up -d --build --remove-orphans
+          docker compose -p "$APP" up -d --build --remove-orphans $SERVICES
           docker image prune -f
       # 공개 저장소라 Actions 로그가 공개된다. 앱 로그(DB 주소 등 내부 정보 포함)는 여기 출력하지 않는다
       - name: Wait for startup
         run: |
-          for i in $(seq 1 60); do
-            if docker logs toy 2>&1 | grep -q "Started ToyApplication"; then
-              echo "started"; exit 0
-            fi
-            if [ "$(docker inspect -f '{{.State.Running}}' toy)" != "true" ]; then
-              echo "컨테이너가 멈춤. NAS 에서 확인: sudo docker logs --tail 100 toy"; exit 1
-            fi
-            sleep 2
+          for service in $SERVICES; do
+            container="toy-$service"
+            main="$(tr '[:lower:]' '[:upper:]' <<< "${service:0:1}")${service:1}Application"
+            ok=""
+            for i in $(seq 1 60); do
+              if docker logs "$container" 2>&1 | grep -q "Started $main"; then
+                ok=1; echo "$container started"; break
+              fi
+              if [ "$(docker inspect -f '{{.State.Running}}' "$container")" != "true" ]; then
+                echo "$container 가 멈춤. NAS 에서 확인: sudo docker logs --tail 100 $container"; exit 1
+              fi
+              sleep 2
+            done
+            [ -n "$ok" ] || { echo "$container 가 120초 안에 시작되지 않음. NAS 에서 확인: sudo docker logs --tail 100 $container"; exit 1; }
           done
-          echo "120초 안에 시작되지 않음. NAS 에서 확인: sudo docker logs --tail 100 toy"; exit 1
       - name: Show status
         run: docker compose -p "$APP" ps

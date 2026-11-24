@@ -52,3 +52,25 @@ subprojects {
         useJUnitPlatform()
     }
 }
+
+/** 따로 실행 · 배포되는 앱 모듈. 배포 태그의 접미사와 Docker 이미지 이름도 이 이름을 쓴다. */
+val apps = setOf("bot", "crawler", "internal", "external")
+
+configure(subprojects.filter { it.name in apps }) {
+    apply(plugin = "org.springframework.boot")
+
+    dependencies {
+        "runtimeOnly"("com.h2database:h2") // local 프로필
+        "testRuntimeOnly"("com.h2database:h2")
+    }
+
+    // 실행용 bootJar 만 만든다
+    tasks.named<Jar>("jar") {
+        enabled = false
+    }
+
+    // 프로젝트 루트에서 실행해야 .env 와 ./data(H2) 를 루트 기준으로 찾는다
+    tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
+        workingDir = rootProject.projectDir
+    }
+}
